@@ -1,0 +1,106 @@
+{
+  "app": {
+    "title": "Excel Data Validator",
+    "subtitle": "Validate Israeli ID numbers, phone numbers, and email addresses"
+  },
+  "language": {
+    "he": "עברית",
+    "en": "English"
+  },
+  "upload": {
+    "title": "Upload File",
+    "dropzone": "Drag and drop an Excel file here",
+    "or": "or",
+    "browse": "Browse Files",
+    "formats": "Supported formats: .xlsx, .xls, .csv",
+    "maxSize": "Maximum size: 50MB",
+    "error": {
+      "invalidType": "Unsupported file type. Use .xlsx, .xls, or .csv",
+      "tooLarge": "File is too large. Maximum size is 50MB",
+      "parseError": "Error reading file. Make sure the file is valid",
+      "empty": "File is empty or contains no data"
+    }
+  },
+  "mapping": {
+    "title": "Column Mapping",
+    "description": "Review auto-detection and adjust as needed",
+    "column": "Column",
+    "detectedType": "Detected Type",
+    "confidence": "Confidence",
+    "sampleValues": "Sample Values",
+    "type": "Type",
+    "mandatory": "Mandatory",
+    "startValidation": "Start Validation",
+    "noColumns": "No columns selected for validation. Select at least one column",
+    "types": {
+      "id": "ID Number",
+      "phone": "Mobile Phone",
+      "landline": "Landline",
+      "email": "Email",
+      "ignore": "Ignore"
+    }
+  },
+  "validation": {
+    "title": "Validating data...",
+    "progress": "{{percent}}% complete",
+    "processing": "Processing {{current}} of {{total}} rows"
+  },
+  "results": {
+    "title": "Validation Results",
+    "summary": "Summary",
+    "totalCells": "Total Cells",
+    "valid": "Valid",
+    "warnings": "Warnings",
+    "errors": "Errors",
+    "filter": {
+      "all": "All",
+      "valid": "Valid",
+      "warning": "Warnings",
+      "error": "Errors"
+    },
+    "table": {
+      "row": "Row",
+      "noResults": "No results to display",
+      "page": "Page {{current}} of {{total}}"
+    },
+    "export": "Export to Excel",
+    "exporting": "Exporting...",
+    "fix": "Fix",
+    "fixAll": "Fix All ({{count}})",
+    "newFile": "New File",
+    "perColumn": "Per Column"
+  },
+  "validators": {
+    "id": {
+      "valid": "Valid ID number",
+      "invalidCheckDigit": "Invalid check digit",
+      "invalidLength": "ID number must be up to 9 digits",
+      "nonNumeric": "ID number must contain only digits",
+      "allZeros": "ID number cannot be all zeros",
+      "empty": "Empty ID number"
+    },
+    "phone": {
+      "valid": "Valid phone number",
+      "validLandline": "Landline number - did you mean a mobile number?",
+      "invalidPrefix": "Unrecognized phone prefix",
+      "invalidLength": "Phone number must be 10 digits (including prefix)",
+      "nonNumeric": "Phone number must contain only digits",
+      "empty": "Empty phone number"
+    },
+    "landline": {
+      "valid": "Valid landline number",
+      "isMobile": "This is a mobile number - did you mean a landline?",
+      "invalidPrefix": "Unrecognized phone prefix",
+      "invalidLength": "Landline number must be 9-10 digits",
+      "nonNumeric": "Phone number must contain only digits",
+      "empty": "Empty landline number"
+    },
+    "email": {
+      "valid": "Valid email address",
+      "invalidFormat": "Invalid email format",
+      "domainTypo": "Did you mean {{suggestion}}?",
+      "invalidTld": "Invalid domain ending",
+      "empty": "Empty email address"
+    }
+  }
+}
