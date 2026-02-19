@@ -10,6 +10,7 @@ export function ColumnMapping() {
   const setColumnType = useValidatorStore((s) => s.setColumnType);
   const setColumnMandatory = useValidatorStore((s) => s.setColumnMandatory);
   const runValidation = useValidatorStore((s) => s.runValidation);
+  const reset = useValidatorStore((s) => s.reset);
 
   const hasActiveColumns = mappings.some((m) => m.type !== 'ignore');
 
@@ -84,9 +85,15 @@ export function ColumnMapping() {
         </div>
       </div>
 
-      <div className="mt-6 text-center">
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <button
+          onClick={reset}
+          className="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+        >
+          {t('mapping.back')}
+        </button>
         {!hasActiveColumns && (
-          <p className="text-warning-600 text-sm mb-3">{t('mapping.noColumns')}</p>
+          <p className="text-warning-600 text-sm">{t('mapping.noColumns')}</p>
         )}
         <button
           onClick={runValidation}

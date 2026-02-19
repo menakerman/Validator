@@ -30,6 +30,7 @@
     "sampleValues": "ערכים לדוגמה",
     "type": "סוג",
     "mandatory": "שדה חובה",
+    "back": "חזרה",
     "startValidation": "התחל אימות",
     "noColumns": "לא זוהו עמודות לאימות. בחר לפחות עמודה אחת",
     "types": {

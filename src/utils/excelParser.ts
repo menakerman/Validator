@@ -3,7 +3,6 @@ import type { ParsedFile } from '../types';
 
 // Detect if a buffer starts with HTML content (common for fake .xls exports)
 function isHtmlFile(data: Uint8Array): boolean {
-  // Check first 500 bytes for HTML markers
   const head = new TextDecoder('ascii').decode(data.slice(0, 500)).toLowerCase();
   return head.includes('<!doctype html') || head.includes('<html') || head.includes('<table');
 }
@@ -15,6 +14,26 @@ function detectCharset(data: Uint8Array): string {
   return match?.[1] ?? 'utf-8';
 }
 
+// Parse an HTML table into rows of strings
+function parseHtmlTable(html: string): string[][] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const table = doc.querySelector('table');
+  if (!table) return [];
+
+  const rows: string[][] = [];
+  for (const tr of table.querySelectorAll('tr')) {
+    const cells: string[] = [];
+    for (const td of tr.querySelectorAll('td, th')) {
+      cells.push((td.textContent ?? '').trim());
+    }
+    if (cells.length > 0) {
+      rows.push(cells);
+    }
+  }
+  return rows;
+}
+
 export function parseExcelFile(file: File): Promise<ParsedFile> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -24,28 +43,28 @@ export function parseExcelFile(file: File): Promise<ParsedFile> {
         const arrayBuf = e.target?.result as ArrayBuffer;
         const data = new Uint8Array(arrayBuf);
 
-        let workbook: XLSX.WorkBook;
+        let raw: string[][];
 
         if (isHtmlFile(data)) {
-          // HTML-based .xls: decode with the correct charset then parse as string
+          // HTML-based .xls: decode with correct charset, parse HTML table directly
           const charset = detectCharset(data);
           const html = new TextDecoder(charset).decode(data);
-          workbook = XLSX.read(html, { type: 'string' });
+          raw = parseHtmlTable(html);
         } else {
-          workbook = XLSX.read(data, { type: 'array' });
-        }
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 
-        if (!firstSheet) {
-          reject(new Error('upload.error.empty'));
-          return;
-        }
+          if (!firstSheet) {
+            reject(new Error('upload.error.empty'));
+            return;
+          }
 
-        const raw: string[][] = XLSX.utils.sheet_to_json(firstSheet, {
-          header: 1,
-          defval: '',
-          raw: false,
-        });
+          raw = XLSX.utils.sheet_to_json(firstSheet, {
+            header: 1,
+            defval: '',
+            raw: false,
+          });
+        }
 
         if (raw.length === 0) {
           reject(new Error('upload.error.empty'));
@@ -53,7 +72,6 @@ export function parseExcelFile(file: File): Promise<ParsedFile> {
         }
 
         // Find the header row: the first row with 3+ non-empty cells
-        // This skips report-title rows and blank rows common in exported files
         let headerRowIndex = 0;
         for (let i = 0; i < Math.min(raw.length, 10); i++) {
           const nonEmpty = raw[i].filter((cell) => String(cell).trim() !== '').length;

@@ -30,6 +30,7 @@
     "sampleValues": "Sample Values",
     "type": "Type",
     "mandatory": "Mandatory",
+    "back": "Back",
     "startValidation": "Start Validation",
     "noColumns": "No columns selected for validation. Select at least one column",
     "types": {
