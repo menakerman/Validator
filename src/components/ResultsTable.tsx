@@ -160,17 +160,17 @@ function EditableCell({
   const [draft, setDraft] = useState(cell.originalValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const startEditing = () => {
+    setDraft(cell.originalValue);
+    setEditing(true);
+  };
+
   useEffect(() => {
     if (editing) {
       inputRef.current?.focus();
       inputRef.current?.select();
     }
   }, [editing]);
-
-  // Sync draft when cell value changes externally (e.g. fix all)
-  useEffect(() => {
-    setDraft(cell.originalValue);
-  }, [cell.originalValue]);
 
   const commit = () => {
     setEditing(false);
@@ -200,7 +200,7 @@ function EditableCell({
       <CellTooltip cell={cell}>
         <span
           className="cursor-text hover:underline hover:decoration-dotted"
-          onDoubleClick={() => setEditing(true)}
+          onDoubleClick={startEditing}
         >
           {cell.originalValue || '-'}
         </span>

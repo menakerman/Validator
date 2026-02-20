@@ -10,7 +10,7 @@ function isHtmlFile(data: Uint8Array): boolean {
 // Detect charset from HTML meta tag
 function detectCharset(data: Uint8Array): string {
   const head = new TextDecoder('ascii').decode(data.slice(0, 1000)).toLowerCase();
-  const match = head.match(/charset[=\s]*([a-z0-9\-]+)/);
+  const match = head.match(/charset[=\s]*([a-z0-9-]+)/);
   return match?.[1] ?? 'utf-8';
 }
 
