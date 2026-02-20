@@ -1,3 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.claude/settings.local.json
+
+# Build output
+dist/
+dist-ssr/
+build/
+
+# Coverage
+coverage/
+
+# Playwright
+test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+.playwright-mcp/
+
 # Logs
 logs
 *.log
@@ -7,18 +32,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
+# Editor
+.vscode/
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
+*.swp
+*.swo
+*.sw?
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
