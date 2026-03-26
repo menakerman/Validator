@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@testing-library/dom": "^10.4.1",
     "exceljs": "^4.4.0",
     "fastest-levenshtein": "^1.0.16",
     "i18next": "^25.8.11",
