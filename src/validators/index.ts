@@ -3,11 +3,17 @@ import { validateIsraeliId } from './israeliId';
 import { validatePhone } from './phone';
 import { validateLandline } from './landline';
 import { validateEmail } from './email';
+import { validateString } from './string';
+import { validateNumber } from './number';
+import { validateGender } from './gender';
 
 export { validateIsraeliId } from './israeliId';
 export { validatePhone } from './phone';
 export { validateLandline } from './landline';
 export { validateEmail } from './email';
+export { validateString } from './string';
+export { validateNumber } from './number';
+export { validateGender } from './gender';
 
 export function validate(
   value: string,
@@ -15,9 +21,15 @@ export function validate(
   row: number,
   column: number,
   mandatory: boolean = true,
+  emptyValues: string[] = [],
 ): CellValidation {
-  // If not mandatory and value is empty, skip validation
-  if (!mandatory && !value.trim()) {
+  const trimmed = value.trim();
+
+  // Check if value matches a configured empty pattern
+  const isEmptyValue = !trimmed || emptyValues.some((ev) => trimmed === ev);
+
+  // If not mandatory and value is empty (or matches empty pattern), skip validation
+  if (!mandatory && isEmptyValue) {
     return {
       row,
       column,
@@ -27,15 +39,25 @@ export function validate(
     };
   }
 
+  // If mandatory and value is empty, let the individual validator handle it
+  // But if value matches an empty pattern (like "-"), treat it as truly empty
+  const effectiveValue = isEmptyValue ? '' : value;
+
   switch (type) {
     case 'id':
-      return validateIsraeliId(value, row, column);
+      return validateIsraeliId(effectiveValue, row, column);
     case 'phone':
-      return validatePhone(value, row, column);
+      return validatePhone(effectiveValue, row, column);
     case 'landline':
-      return validateLandline(value, row, column);
+      return validateLandline(effectiveValue, row, column);
     case 'email':
-      return validateEmail(value, row, column);
+      return validateEmail(effectiveValue, row, column);
+    case 'string':
+      return validateString(effectiveValue, row, column);
+    case 'number':
+      return validateNumber(effectiveValue, row, column);
+    case 'gender':
+      return validateGender(effectiveValue, row, column);
     case 'ignore':
       return {
         row,

@@ -1,5 +1,7 @@
 import type { ColumnMapping, ColumnType } from '../types';
 
+export const DEFAULT_EMPTY_VALUES = ['-', '--', 'N/A', 'n/a', 'לא', 'אין', ''];
+
 // Header patterns for auto-detection
 const HEADER_PATTERNS: Record<Exclude<ColumnType, 'ignore'>, RegExp[]> = {
   id: [
@@ -41,6 +43,38 @@ const HEADER_PATTERNS: Record<Exclude<ColumnType, 'ignore'>, RegExp[]> = {
     /e-mail/i,
     /mail/i,
   ],
+  string: [
+    /שם/i,
+    /שם\s*פרטי/i,
+    /שם\s*משפחה/i,
+    /כתובת/i,
+    /עיר/i,
+    /רחוב/i,
+    /^name$/i,
+    /first\s*name/i,
+    /last\s*name/i,
+    /full\s*name/i,
+    /address/i,
+    /city/i,
+    /street/i,
+  ],
+  number: [
+    /מיקוד/i,
+    /גיל/i,
+    /מספר/i,
+    /כמות/i,
+    /zip\s*code/i,
+    /postal/i,
+    /^age$/i,
+    /quantity/i,
+    /amount/i,
+  ],
+  gender: [
+    /מין/i,
+    /מגדר/i,
+    /gender/i,
+    /^sex$/i,
+  ],
 };
 
 // Data sample patterns
@@ -67,6 +101,18 @@ const DATA_PATTERNS: Record<Exclude<ColumnType, 'ignore'>, { test: (v: string) =
     test: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()),
     confidence: 0.9,
   },
+  string: {
+    test: (v) => /[a-zA-Zא-ת]/.test(v.trim()) && !/^\d+$/.test(v.trim()),
+    confidence: 0.3,
+  },
+  number: {
+    test: (v) => /^-?\d[\d,]*(\.\d+)?$/.test(v.trim()),
+    confidence: 0.5,
+  },
+  gender: {
+    test: (v) => /^(male|female|other|m|f|זכר|נקבה|אחר|ז|נ)$/i.test(v.trim()),
+    confidence: 0.85,
+  },
 };
 
 export function detectColumnTypes(headers: string[], data: string[][]): ColumnMapping[] {
@@ -89,6 +135,7 @@ export function detectColumnTypes(headers: string[], data: string[][]): ColumnMa
           mandatory: true,
           confidence: 0.9,
           sampleValues,
+          emptyValues: [...DEFAULT_EMPTY_VALUES],
         };
       }
     }
@@ -111,6 +158,7 @@ export function detectColumnTypes(headers: string[], data: string[][]): ColumnMa
             mandatory: true,
             confidence: Math.round(matchRatio * pattern.confidence * 100) / 100,
             sampleValues,
+            emptyValues: [...DEFAULT_EMPTY_VALUES],
           };
         }
       }
@@ -123,6 +171,7 @@ export function detectColumnTypes(headers: string[], data: string[][]): ColumnMa
       mandatory: true,
       confidence: 0,
       sampleValues,
+      emptyValues: [...DEFAULT_EMPTY_VALUES],
     };
   });
 }

@@ -1,4 +1,4 @@
-export type ColumnType = 'id' | 'phone' | 'landline' | 'email' | 'ignore';
+export type ColumnType = 'id' | 'phone' | 'landline' | 'email' | 'string' | 'number' | 'gender' | 'ignore';
 
 export type ValidationStatus = 'valid' | 'warning' | 'error';
 
@@ -9,6 +9,7 @@ export interface ColumnMapping {
   mandatory: boolean;
   confidence: number;
   sampleValues: string[];
+  emptyValues: string[];
 }
 
 export interface CellValidation {

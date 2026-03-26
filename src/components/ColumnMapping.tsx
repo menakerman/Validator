@@ -2,13 +2,14 @@ import { useTranslation } from 'react-i18next';
 import { useValidatorStore } from '../stores/validatorStore';
 import type { ColumnType } from '../types';
 
-const COLUMN_TYPES: ColumnType[] = ['id', 'phone', 'landline', 'email', 'ignore'];
+const COLUMN_TYPES: ColumnType[] = ['id', 'phone', 'landline', 'email', 'string', 'number', 'gender', 'ignore'];
 
 export function ColumnMapping() {
   const { t } = useTranslation();
   const mappings = useValidatorStore((s) => s.columnMappings);
   const setColumnType = useValidatorStore((s) => s.setColumnType);
   const setColumnMandatory = useValidatorStore((s) => s.setColumnMandatory);
+  const setColumnEmptyValues = useValidatorStore((s) => s.setColumnEmptyValues);
   const runValidation = useValidatorStore((s) => s.runValidation);
   const reset = useValidatorStore((s) => s.reset);
 
@@ -27,6 +28,7 @@ export function ColumnMapping() {
                 <th className="px-4 py-3 text-start text-sm font-semibold text-gray-600">{t('mapping.column')}</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-gray-600">{t('mapping.type')}</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-gray-600">{t('mapping.mandatory')}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-gray-600">{t('mapping.emptyValues')}</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-gray-600">{t('mapping.confidence')}</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-gray-600">{t('mapping.sampleValues')}</th>
               </tr>
@@ -57,6 +59,21 @@ export function ColumnMapping() {
                         checked={mapping.mandatory}
                         onChange={(e) => setColumnMandatory(mapping.columnIndex, e.target.checked)}
                         className="w-4 h-4 accent-primary-600 cursor-pointer"
+                      />
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {mapping.type !== 'ignore' && (
+                      <input
+                        type="text"
+                        value={mapping.emptyValues.join(', ')}
+                        onChange={(e) => {
+                          const values = e.target.value.split(',').map((v) => v.trim()).filter(Boolean);
+                          setColumnEmptyValues(mapping.columnIndex, values);
+                        }}
+                        placeholder={t('mapping.emptyValuesHint')}
+                        className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none w-36"
+                        title={t('mapping.emptyValuesHint')}
                       />
                     )}
                   </td>

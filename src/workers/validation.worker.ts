@@ -12,7 +12,7 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
     const row = data[rowIdx];
     for (const mapping of activeMappings) {
       const value = row[mapping.columnIndex] ?? '';
-      const result = validate(value, mapping.type, rowIdx, mapping.columnIndex, mapping.mandatory);
+      const result = validate(value, mapping.type, rowIdx, mapping.columnIndex, mapping.mandatory, mapping.emptyValues);
       cells.push(result);
     }
 

@@ -30,6 +30,7 @@ interface ValidatorStore {
   parseFile: (file: File) => Promise<void>;
   setColumnType: (columnIndex: number, type: ColumnType) => void;
   setColumnMandatory: (columnIndex: number, mandatory: boolean) => void;
+  setColumnEmptyValues: (columnIndex: number, emptyValues: string[]) => void;
   runValidation: () => void;
   applySuggestion: (row: number, column: number) => void;
   applyAllSuggestions: () => void;
@@ -76,6 +77,13 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   setColumnMandatory: (columnIndex: number, mandatory: boolean) => {
     const mappings = get().columnMappings.map((m) =>
       m.columnIndex === columnIndex ? { ...m, mandatory } : m,
+    );
+    set({ columnMappings: mappings });
+  },
+
+  setColumnEmptyValues: (columnIndex: number, emptyValues: string[]) => {
+    const mappings = get().columnMappings.map((m) =>
+      m.columnIndex === columnIndex ? { ...m, emptyValues } : m,
     );
     set({ columnMappings: mappings });
   },
@@ -131,7 +139,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
           const row = data[rowIdx];
           for (const mapping of activeMappings) {
             const value = row[mapping.columnIndex] ?? '';
-            const result = validate(value, mapping.type, rowIdx, mapping.columnIndex, mapping.mandatory);
+            const result = validate(value, mapping.type, rowIdx, mapping.columnIndex, mapping.mandatory, mapping.emptyValues);
             cells.push(result);
           }
         }
@@ -175,7 +183,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
     newData[row][column] = cell.suggestion!;
 
     // Re-validate the fixed cell
-    const newCell = validate(cell.suggestion!, mapping.type, row, column, mapping.mandatory);
+    const newCell = validate(cell.suggestion!, mapping.type, row, column, mapping.mandatory, mapping.emptyValues);
     const newCells = [...validationResult.cells];
     newCells[cellIdx] = newCell;
 
@@ -203,7 +211,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
     const newData = parsedFile.data.map((r) => [...r]);
     newData[row][column] = newValue;
 
-    const newCell = validate(newValue, mapping.type, row, column, mapping.mandatory);
+    const newCell = validate(newValue, mapping.type, row, column, mapping.mandatory, mapping.emptyValues);
     const newCells = [...validationResult.cells];
     newCells[cellIdx] = newCell;
 
@@ -231,7 +239,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
       if (!mapping) continue;
 
       newData[cell.row][cell.column] = cell.suggestion;
-      newCells[i] = validate(cell.suggestion, mapping.type, cell.row, cell.column, mapping.mandatory);
+      newCells[i] = validate(cell.suggestion, mapping.type, cell.row, cell.column, mapping.mandatory, mapping.emptyValues);
     }
 
     const activeMappings = columnMappings.filter((m) => m.type !== 'ignore');

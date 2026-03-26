@@ -33,11 +33,16 @@
     "back": "Back",
     "startValidation": "Start Validation",
     "noColumns": "No columns selected for validation. Select at least one column",
+    "emptyValues": "Empty Values",
+    "emptyValuesHint": "Values treated as empty (comma-separated)",
     "types": {
       "id": "ID Number",
       "phone": "Mobile Phone",
       "landline": "Landline",
       "email": "Email",
+      "string": "Text",
+      "number": "Number",
+      "gender": "Gender",
       "ignore": "Ignore"
     }
   },
@@ -102,6 +107,21 @@
       "domainTypo": "Did you mean {{suggestion}}?",
       "invalidTld": "Invalid domain ending",
       "empty": "Empty email address"
+    },
+    "string": {
+      "valid": "Valid text",
+      "numbersOnly": "Value contains only digits - is this text?",
+      "empty": "Empty text field"
+    },
+    "number": {
+      "valid": "Valid number",
+      "nonNumeric": "Value must contain only digits",
+      "empty": "Empty number field"
+    },
+    "gender": {
+      "valid": "Valid gender",
+      "invalid": "Unrecognized gender value (expected: male/female/other)",
+      "empty": "Empty gender field"
     }
   }
 }
