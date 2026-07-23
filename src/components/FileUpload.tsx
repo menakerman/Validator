@@ -1,16 +1,23 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFileUpload } from '../hooks/useFileUpload';
 import { useValidatorStore } from '../stores/validatorStore';
+import { RecentActions } from './RecentActions';
 
-export function FileUpload() {
+interface DropCardProps {
+  variant: 'validate' | 'kehilanet';
+  title: string;
+  description: string;
+  icon: ReactNode;
+  badge?: string;
+  onFile: (file: File) => void;
+}
+
+function DropCard({ variant, title, description, icon, badge, onFile }: DropCardProps) {
   const { t } = useTranslation();
-  const parseFile = useValidatorStore((s) => s.parseFile);
-  const parseKehilanet = useValidatorStore((s) => s.parseKehilanet);
-  const storeError = useValidatorStore((s) => s.error);
-
   const {
     isDragging,
-    error: uploadError,
+    error,
     handleDragEnter,
     handleDragLeave,
     handleDragOver,
@@ -18,90 +25,126 @@ export function FileUpload() {
     handleFileSelect,
     inputRef,
     openFilePicker,
-  } = useFileUpload((file) => parseFile(file));
+  } = useFileUpload(onFile);
 
-  const {
-    error: kehilanetError,
-    handleFileSelect: handleKehilanetSelect,
-    inputRef: kehilanetInputRef,
-    openFilePicker: openKehilanetPicker,
-  } = useFileUpload((file) => parseKehilanet(file));
-
-  const error = uploadError || kehilanetError || storeError;
+  const emphasized = variant === 'kehilanet';
 
   return (
-    <div className="max-w-xl mx-auto">
-      <h2 className="text-2xl font-semibold text-center mb-6">{t('upload.title')}</h2>
+    <div
+      role="button"
+      tabIndex={0}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onClick={openFilePicker}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') openFilePicker();
+      }}
+      className={`
+        group relative flex flex-col items-center text-center rounded-2xl border-2 border-dashed
+        p-8 cursor-pointer transition-all duration-200
+        ${isDragging
+          ? 'border-primary-500 bg-primary-50 scale-[1.02] shadow-lg'
+          : emphasized
+            ? 'border-primary-300 bg-gradient-to-b from-primary-50/70 to-white hover:border-primary-400 hover:shadow-md'
+            : 'border-gray-300 bg-white hover:border-primary-400 hover:bg-gray-50'
+        }
+      `}
+    >
+      {badge && (
+        <span className="absolute top-3 end-3 bg-primary-600 text-white text-[11px] font-medium px-2.5 py-1 rounded-full">
+          {badge}
+        </span>
+      )}
 
       <div
-        role="button"
-        tabIndex={0}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onClick={openFilePicker}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openFilePicker(); }}
-        className={`
-          relative border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer
-          transition-all duration-200
-          ${isDragging
-            ? 'border-primary-500 bg-primary-50 scale-[1.02]'
-            : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
-          }
-        `}
+        className={`mb-4 w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
+          emphasized
+            ? 'bg-primary-100 text-primary-600 group-hover:bg-primary-600 group-hover:text-white'
+            : 'bg-slate-100 text-slate-500 group-hover:bg-primary-100 group-hover:text-primary-600'
+        }`}
       >
-        <div className="mb-4">
-          <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-        </div>
-
-        <p className="text-lg font-medium text-gray-700 mb-2">
-          {t('upload.dropzone')}
-        </p>
-        <p className="text-gray-400 mb-4">{t('upload.or')}</p>
-        <span className="inline-block px-6 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
-          {t('upload.browse')}
-        </span>
-
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
+        {icon}
       </div>
 
-      <div className="mt-4 text-center text-sm text-gray-500 space-y-1">
-        <p>{t('upload.formats')}</p>
-        <p>{t('upload.maxSize')}</p>
-      </div>
+      <h3 className="text-lg font-semibold text-gray-800 mb-1.5">{title}</h3>
+      <p className="text-sm text-gray-500 mb-5 max-w-xs leading-relaxed">{description}</p>
 
-      {/* Kehilanet -> Mekome conversion */}
-      <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-        <p className="text-sm text-gray-600 mb-3">{t('upload.kehilanet.description')}</p>
-        <button
-          onClick={openKehilanetPicker}
-          className="inline-block px-6 py-2.5 bg-white border border-primary-300 text-primary-700 rounded-lg font-medium hover:bg-primary-50 transition-colors"
-        >
-          {t('upload.kehilanet.button')}
-        </button>
-        <input
-          ref={kehilanetInputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          onChange={handleKehilanetSelect}
-          className="hidden"
-        />
-      </div>
+      <span
+        className={`inline-block px-5 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+          emphasized
+            ? 'bg-primary-600 text-white group-hover:bg-primary-700'
+            : 'bg-slate-100 text-slate-700 group-hover:bg-slate-200'
+        }`}
+      >
+        {t('upload.browse')}
+      </span>
+      <p className="mt-3 text-xs text-gray-400">{t('upload.dropHint')}</p>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
       {error && (
+        <p className="mt-3 text-xs text-error-600">{t(error)}</p>
+      )}
+    </div>
+  );
+}
+
+export function FileUpload() {
+  const { t } = useTranslation();
+  const parseFile = useValidatorStore((s) => s.parseFile);
+  const parseKehilanet = useValidatorStore((s) => s.parseKehilanet);
+  const storeError = useValidatorStore((s) => s.error);
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-semibold text-gray-800">{t('upload.title')}</h2>
+        <p className="text-gray-500 mt-2">{t('upload.subtitle')}</p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <DropCard
+          variant="kehilanet"
+          title={t('upload.kehilanet.title')}
+          description={t('upload.kehilanet.description')}
+          badge={t('upload.kehilanet.badge')}
+          onFile={parseKehilanet}
+          icon={
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+          }
+        />
+        <DropCard
+          variant="validate"
+          title={t('upload.validate.title')}
+          description={t('upload.validate.description')}
+          onFile={parseFile}
+          icon={
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          }
+        />
+      </div>
+
+      <p className="text-center text-xs text-gray-400 mt-5">{t('upload.formats')}</p>
+
+      {storeError && (
         <div className="mt-4 p-3 bg-error-50 border border-error-200 rounded-lg text-error-700 text-center text-sm">
-          {t(error)}
+          {t(storeError)}
         </div>
       )}
+
+      <RecentActions />
     </div>
   );
 }
