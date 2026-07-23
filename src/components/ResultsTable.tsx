@@ -35,17 +35,19 @@ export function ResultsTable() {
     return validationResult.cells.filter((c) => c.status === resultFilter);
   }, [validationResult, resultFilter]);
 
+  // Group into rows first, then paginate by rows so each page holds
+  // ROWS_PER_PAGE rows regardless of how many columns are validated.
+  const allRows = useMemo(() => groupByRow(filteredCells), [filteredCells]);
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filteredCells.length / ROWS_PER_PAGE)),
-    [filteredCells],
+    () => Math.max(1, Math.ceil(allRows.length / ROWS_PER_PAGE)),
+    [allRows],
   );
 
-  const paginatedCells = useMemo(() => {
+  const groupedRows = useMemo(() => {
     const start = (currentPage - 1) * ROWS_PER_PAGE;
-    return filteredCells.slice(start, start + ROWS_PER_PAGE);
-  }, [filteredCells, currentPage]);
-
-  const groupedRows = useMemo(() => groupByRow(paginatedCells), [paginatedCells]);
+    return allRows.slice(start, start + ROWS_PER_PAGE);
+  }, [allRows, currentPage]);
 
   return (
     <div>
@@ -74,9 +76,9 @@ export function ResultsTable() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-start text-sm font-semibold text-gray-600">{t('results.table.row')}</th>
+                <th className="px-3 py-2 text-start text-sm font-semibold text-gray-600">{t('results.table.row')}</th>
                 {activeColumns.map((col) => (
-                  <th key={col.columnIndex} className="px-4 py-3 text-start text-sm font-semibold text-gray-600">
+                  <th key={col.columnIndex} className="px-3 py-2 text-start text-sm font-semibold text-gray-600">
                     {col.headerName}
                   </th>
                 ))}
@@ -92,18 +94,18 @@ export function ResultsTable() {
               ) : (
                 groupedRows.map(([rowIdx, cells]) => (
                   <tr key={rowIdx} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-2 text-sm text-gray-500 font-mono">{rowIdx + 1}</td>
+                    <td className="px-3 py-1 text-sm text-gray-500 font-mono">{rowIdx + 1}</td>
                     {activeColumns.map((col) => {
                       const cell = cells.find((c) => c.column === col.columnIndex);
                       if (!cell) {
                         return (
-                          <td key={col.columnIndex} className="px-4 py-2 text-sm">
+                          <td key={col.columnIndex} className="px-3 py-1 text-sm">
                             {parsedFile?.data[rowIdx]?.[col.columnIndex] ?? ''}
                           </td>
                         );
                       }
                       return (
-                        <td key={col.columnIndex} className={`px-4 py-2 text-sm ${STATUS_BG[cell.status]}`}>
+                        <td key={col.columnIndex} className={`px-3 py-1 text-sm ${STATUS_BG[cell.status]}`}>
                           <EditableCell
                             cell={cell}
                             onSave={(val) => updateCellValue(cell.row, cell.column, val)}

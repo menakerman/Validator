@@ -12,7 +12,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="w-[90%] mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/validator.svg" alt="" className="w-9 h-9" />
             <div>
@@ -23,7 +23,7 @@ export function Layout({ children }: LayoutProps) {
           <LanguageToggle />
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="w-[90%] mx-auto px-4 py-8">
         {children}
       </main>
     </div>
