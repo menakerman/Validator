@@ -22,31 +22,32 @@ function col(letter: string): number {
 interface KehilanetField {
   col: number;
   type: ColumnType;
-  mandatory: boolean;
 }
 
-// Columns to validate on the Kehilanet file, per the agreed format.
+// Columns to validate on the Kehilanet file, per the agreed format. Whether a
+// column may be empty is derived from the Mekome layout (see MANDATORY_SOURCES):
+// a column is mandatory only when its Mekome target header is starred.
 export const KEHILANET_FIELDS: KehilanetField[] = [
-  { col: col('B'), type: 'string', mandatory: true },           // שם פרטי
-  { col: col('C'), type: 'string', mandatory: true },           // שם משפחה
-  { col: col('D'), type: 'date', mandatory: true },             // תאריך לידה
-  { col: col('E'), type: 'id', mandatory: true },               // תעודת זהות
-  { col: col('L'), type: 'string', mandatory: false },          // ישוב
-  { col: col('M'), type: 'string', mandatory: false },          // שכונה
-  { col: col('N'), type: 'string', mandatory: false },          // רחוב
-  { col: col('R'), type: 'email', mandatory: false },           // דואר אלקטרוני
-  { col: col('T'), type: 'string', mandatory: false },          // שם נעורים
-  { col: col('U'), type: 'phoneOrLandline', mandatory: false }, // טלפון בית
-  { col: col('V'), type: 'phone', mandatory: false },           // טלפון נייד
-  { col: col('W'), type: 'phone', mandatory: false },           // טלפון נייד נוסף
-  { col: col('AK'), type: 'string', mandatory: false },         // מין
-  { col: col('AL'), type: 'string', mandatory: false },         // מצב משפחתי
-  { col: col('AO'), type: 'string', mandatory: false },         // סוג משתמש
-  { col: col('AQ'), type: 'id', mandatory: false },             // ת.ז. בן/בת זוג
-  { col: col('BA'), type: 'string', mandatory: false },         // ממ"ד/מקלט
-  { col: col('BD'), type: 'string', mandatory: false },         // איש קשר במקרה אסון
-  { col: col('BE'), type: 'string', mandatory: false },         // טלפון איש קשר במקרה אסון
-  { col: col('BS'), type: 'string', mandatory: false },         // קבוצות
+  { col: col('B'), type: 'string' },           // שם פרטי
+  { col: col('C'), type: 'string' },           // שם משפחה
+  { col: col('D'), type: 'date' },             // תאריך לידה
+  { col: col('E'), type: 'id' },               // תעודת זהות
+  { col: col('L'), type: 'string' },           // ישוב
+  { col: col('M'), type: 'string' },           // שכונה
+  { col: col('N'), type: 'string' },           // רחוב
+  { col: col('R'), type: 'email' },            // דואר אלקטרוני
+  { col: col('T'), type: 'string' },           // שם נעורים
+  { col: col('U'), type: 'phoneOrLandline' },  // טלפון בית
+  { col: col('V'), type: 'phone' },            // טלפון נייד
+  { col: col('W'), type: 'phone' },            // טלפון נייד נוסף
+  { col: col('AK'), type: 'string' },          // מין
+  { col: col('AL'), type: 'string' },          // מצב משפחתי
+  { col: col('AO'), type: 'string' },          // סוג משתמש
+  { col: col('AQ'), type: 'id' },              // ת.ז. בן/בת זוג
+  { col: col('BA'), type: 'string' },          // ממ"ד/מקלט
+  { col: col('BD'), type: 'string' },          // איש קשר במקרה אסון
+  { col: col('BE'), type: 'string' },          // טלפון איש קשר במקרה אסון
+  { col: col('BS'), type: 'string' },          // קבוצות
 ];
 
 interface MekomeColumn {
@@ -85,6 +86,14 @@ export const MEKOME_COLUMNS: MekomeColumn[] = [
   { en: 'User Type', he: 'סוג משתמש', source: col('AO') },
   { en: 'Is Mekome member', he: 'חבר מקומי הודעות', source: null, constant: 'לא' },
 ];
+
+// A Kehilanet source column is mandatory (may not be empty) only when its
+// Mekome target column is starred ("*") in the Hebrew header row.
+export const MANDATORY_SOURCES = new Set<number>(
+  MEKOME_COLUMNS
+    .filter((c) => c.source !== null && c.he.trim().endsWith('*'))
+    .map((c) => c.source as number),
+);
 
 function isKehilanetHeaderRow(row: string[]): boolean {
   const joined = row.map((c) => String(c).trim());
@@ -156,7 +165,7 @@ export function buildKehilanetMappings(parsed: ParsedFile): ColumnMapping[] {
       columnIndex: i,
       headerName: parsed.headers[i] ?? `Column ${i + 1}`,
       type: field ? field.type : 'ignore',
-      mandatory: field ? field.mandatory : true,
+      mandatory: field ? MANDATORY_SOURCES.has(field.col) : true,
       confidence: field ? 1 : 0,
       sampleValues,
       emptyValues: [],
