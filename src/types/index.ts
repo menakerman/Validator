@@ -1,4 +1,6 @@
-export type ColumnType = 'id' | 'phone' | 'landline' | 'email' | 'string' | 'number' | 'gender' | 'ignore';
+export type ColumnType = 'id' | 'phone' | 'landline' | 'phoneOrLandline' | 'email' | 'string' | 'number' | 'gender' | 'date' | 'ignore';
+
+export type AppMode = 'validate' | 'kehilanet';
 
 export type ValidationStatus = 'valid' | 'warning' | 'error';
 

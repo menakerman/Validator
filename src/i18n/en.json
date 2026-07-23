@@ -14,11 +14,16 @@
     "browse": "Browse Files",
     "formats": "Supported formats: .xlsx, .xls, .csv",
     "maxSize": "Maximum size: 50MB",
+    "kehilanet": {
+      "description": "Have a Kehilanet export? Convert it to Mekome format",
+      "button": "Convert Kehilanet file to Mekome"
+    },
     "error": {
       "invalidType": "Unsupported file type. Use .xlsx, .xls, or .csv",
       "tooLarge": "File is too large. Maximum size is 50MB",
       "parseError": "Error reading file. Make sure the file is valid",
-      "empty": "File is empty or contains no data"
+      "empty": "File is empty or contains no data",
+      "notKehilanet": "This is not a valid Kehilanet file (Kehilanet header row not found)"
     }
   },
   "mapping": {
@@ -39,10 +44,12 @@
       "id": "ID Number",
       "phone": "Mobile Phone",
       "landline": "Landline",
+      "phoneOrLandline": "Mobile or Landline",
       "email": "Email",
       "string": "Text",
       "number": "Number",
       "gender": "Gender",
+      "date": "Date",
       "ignore": "Ignore"
     }
   },
@@ -70,6 +77,7 @@
       "page": "Page {{current}} of {{total}}"
     },
     "export": "Export to Excel",
+    "exportMekome": "Export Mekome File",
     "exporting": "Exporting...",
     "fix": "Fix",
     "fixAll": "Fix All ({{count}})",
@@ -122,6 +130,20 @@
       "valid": "Valid gender",
       "invalid": "Unrecognized gender value (expected: male/female/other)",
       "empty": "Empty gender field"
+    },
+    "date": {
+      "valid": "Valid date",
+      "invalidFormat": "Invalid date format (expected: DD/MM/YYYY)",
+      "invalidDate": "Date does not exist",
+      "future": "Birth date is in the future",
+      "empty": "Empty date field"
+    },
+    "phoneOrLandline": {
+      "valid": "Valid phone number",
+      "invalidPrefix": "Unrecognized phone prefix",
+      "invalidLength": "Invalid phone number length",
+      "nonNumeric": "Phone number must contain only digits",
+      "empty": "Empty phone number"
     }
   }
 }
