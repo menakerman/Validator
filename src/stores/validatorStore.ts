@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type {
+  AppMode,
   AppStep,
   CellValidation,
   ColumnMapping,
@@ -14,11 +15,13 @@ import type {
 import { validate } from '../validators';
 import { parseExcelFile } from '../utils/excelParser';
 import { detectColumnTypes } from '../utils/columnDetector';
+import { parseKehilanetFile, buildKehilanetMappings } from '../utils/kehilanet';
 
 const WORKER_THRESHOLD = 10000;
 
 interface ValidatorStore {
   step: AppStep;
+  mode: AppMode;
   parsedFile: ParsedFile | null;
   columnMappings: ColumnMapping[];
   validationResult: ValidationResult | null;
@@ -28,6 +31,7 @@ interface ValidatorStore {
   error: string | null;
 
   parseFile: (file: File) => Promise<void>;
+  parseKehilanet: (file: File) => Promise<void>;
   setColumnType: (columnIndex: number, type: ColumnType) => void;
   setColumnMandatory: (columnIndex: number, mandatory: boolean) => void;
   setColumnEmptyValues: (columnIndex: number, emptyValues: string[]) => void;
@@ -42,6 +46,7 @@ interface ValidatorStore {
 
 export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   step: 'upload',
+  mode: 'validate',
   parsedFile: null,
   columnMappings: [],
   validationResult: null,
@@ -56,10 +61,28 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
       const parsed = await parseExcelFile(file);
       const mappings = detectColumnTypes(parsed.headers, parsed.data);
       set({
+        mode: 'validate',
         parsedFile: parsed,
         columnMappings: mappings,
         step: 'mapping',
       });
+    } catch (err) {
+      set({ error: (err as Error).message });
+    }
+  },
+
+  parseKehilanet: async (file: File) => {
+    try {
+      set({ error: null });
+      const parsed = await parseKehilanetFile(file);
+      const mappings = buildKehilanetMappings(parsed);
+      set({
+        mode: 'kehilanet',
+        parsedFile: parsed,
+        columnMappings: mappings,
+      });
+      // Skip the manual mapping step — the layout is fixed. Validate immediately.
+      get().runValidation();
     } catch (err) {
       set({ error: (err as Error).message });
     }
@@ -262,6 +285,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   reset: () => {
     set({
       step: 'upload',
+      mode: 'validate',
       parsedFile: null,
       columnMappings: [],
       validationResult: null,

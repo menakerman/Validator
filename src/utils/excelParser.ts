@@ -34,7 +34,9 @@ function parseHtmlTable(html: string): string[][] {
   return rows;
 }
 
-export function parseExcelFile(file: File): Promise<ParsedFile> {
+// Read the first worksheet of a file into raw rows of strings, handling both
+// real spreadsheets and HTML-based `.xls` exports. Returns [] when unreadable.
+export function readFileRows(file: File): Promise<string[][]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -55,7 +57,7 @@ export function parseExcelFile(file: File): Promise<ParsedFile> {
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 
           if (!firstSheet) {
-            reject(new Error('upload.error.empty'));
+            resolve([]);
             return;
           }
 
@@ -66,6 +68,21 @@ export function parseExcelFile(file: File): Promise<ParsedFile> {
           });
         }
 
+        resolve(raw);
+      } catch {
+        reject(new Error('upload.error.parseError'));
+      }
+    };
+
+    reader.onerror = () => reject(new Error('upload.error.parseError'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+export function parseExcelFile(file: File): Promise<ParsedFile> {
+  return readFileRows(file).then((raw) => {
+    return new Promise<ParsedFile>((resolve, reject) => {
+      try {
         if (raw.length === 0) {
           reject(new Error('upload.error.empty'));
           return;
@@ -109,9 +126,6 @@ export function parseExcelFile(file: File): Promise<ParsedFile> {
       } catch {
         reject(new Error('upload.error.parseError'));
       }
-    };
-
-    reader.onerror = () => reject(new Error('upload.error.parseError'));
-    reader.readAsArrayBuffer(file);
+    });
   });
 }

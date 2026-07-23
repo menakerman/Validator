@@ -5,6 +5,7 @@ import { useValidatorStore } from '../stores/validatorStore';
 export function FileUpload() {
   const { t } = useTranslation();
   const parseFile = useValidatorStore((s) => s.parseFile);
+  const parseKehilanet = useValidatorStore((s) => s.parseKehilanet);
   const storeError = useValidatorStore((s) => s.error);
 
   const {
@@ -19,7 +20,14 @@ export function FileUpload() {
     openFilePicker,
   } = useFileUpload((file) => parseFile(file));
 
-  const error = uploadError || storeError;
+  const {
+    error: kehilanetError,
+    handleFileSelect: handleKehilanetSelect,
+    inputRef: kehilanetInputRef,
+    openFilePicker: openKehilanetPicker,
+  } = useFileUpload((file) => parseKehilanet(file));
+
+  const error = uploadError || kehilanetError || storeError;
 
   return (
     <div className="max-w-xl mx-auto">
@@ -69,6 +77,24 @@ export function FileUpload() {
       <div className="mt-4 text-center text-sm text-gray-500 space-y-1">
         <p>{t('upload.formats')}</p>
         <p>{t('upload.maxSize')}</p>
+      </div>
+
+      {/* Kehilanet -> Mekome conversion */}
+      <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+        <p className="text-sm text-gray-600 mb-3">{t('upload.kehilanet.description')}</p>
+        <button
+          onClick={openKehilanetPicker}
+          className="inline-block px-6 py-2.5 bg-white border border-primary-300 text-primary-700 rounded-lg font-medium hover:bg-primary-50 transition-colors"
+        >
+          {t('upload.kehilanet.button')}
+        </button>
+        <input
+          ref={kehilanetInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          onChange={handleKehilanetSelect}
+          className="hidden"
+        />
       </div>
 
       {error && (

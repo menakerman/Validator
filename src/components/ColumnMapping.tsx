@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useValidatorStore } from '../stores/validatorStore';
 import type { ColumnType } from '../types';
 
-const COLUMN_TYPES: ColumnType[] = ['id', 'phone', 'landline', 'email', 'string', 'number', 'gender', 'ignore'];
+const COLUMN_TYPES: ColumnType[] = ['id', 'phone', 'landline', 'phoneOrLandline', 'email', 'string', 'number', 'gender', 'date', 'ignore'];
 
 export function ColumnMapping() {
   const { t } = useTranslation();

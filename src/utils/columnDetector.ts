@@ -75,6 +75,14 @@ const HEADER_PATTERNS: Record<Exclude<ColumnType, 'ignore'>, RegExp[]> = {
     /gender/i,
     /^sex$/i,
   ],
+  date: [
+    /תאריך/i,
+    /לידה/i,
+    /date/i,
+    /birth/i,
+  ],
+  // Kehilanet-specific type; not auto-detected from generic files.
+  phoneOrLandline: [],
 };
 
 // Data sample patterns
@@ -112,6 +120,15 @@ const DATA_PATTERNS: Record<Exclude<ColumnType, 'ignore'>, { test: (v: string) =
   gender: {
     test: (v) => /^(male|female|other|m|f|זכר|נקבה|אחר|ז|נ)$/i.test(v.trim()),
     confidence: 0.85,
+  },
+  date: {
+    test: (v) => /^\d{1,2}[/\-.]\d{1,2}[/\-.]\d{4}$/.test(v.trim()),
+    confidence: 0.85,
+  },
+  // Kehilanet-specific type; never inferred from data samples.
+  phoneOrLandline: {
+    test: () => false,
+    confidence: 0,
   },
 };
 

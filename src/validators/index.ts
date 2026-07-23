@@ -6,6 +6,8 @@ import { validateEmail } from './email';
 import { validateString } from './string';
 import { validateNumber } from './number';
 import { validateGender } from './gender';
+import { validateDate } from './date';
+import { validatePhoneOrLandline } from './phoneOrLandline';
 
 export { validateIsraeliId } from './israeliId';
 export { validatePhone } from './phone';
@@ -14,6 +16,8 @@ export { validateEmail } from './email';
 export { validateString } from './string';
 export { validateNumber } from './number';
 export { validateGender } from './gender';
+export { validateDate } from './date';
+export { validatePhoneOrLandline } from './phoneOrLandline';
 
 export function validate(
   value: string,
@@ -50,6 +54,10 @@ export function validate(
       return validatePhone(effectiveValue, row, column);
     case 'landline':
       return validateLandline(effectiveValue, row, column);
+    case 'phoneOrLandline':
+      return validatePhoneOrLandline(effectiveValue, row, column);
+    case 'date':
+      return validateDate(effectiveValue, row, column);
     case 'email':
       return validateEmail(effectiveValue, row, column);
     case 'string':
