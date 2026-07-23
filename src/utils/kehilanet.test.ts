@@ -90,10 +90,18 @@ describe('buildKehilanetMappings', () => {
     expect(byCol.get(5)?.type).toBe('ignore');          // F
   });
 
-  it('marks core identity fields as mandatory', () => {
+  it('marks a column mandatory only when its Mekome target is starred', () => {
     const byCol = new Map(mappings.map((m) => [m.columnIndex, m]));
-    expect(byCol.get(4)?.mandatory).toBe(true);   // ID
-    expect(byCol.get(20)?.mandatory).toBe(false); // home phone (optional)
+    // Starred in Mekome (may not be empty): B, C, E, V, R
+    expect(byCol.get(1)?.mandatory).toBe(true);   // B First Name*
+    expect(byCol.get(2)?.mandatory).toBe(true);   // C Last Name*
+    expect(byCol.get(4)?.mandatory).toBe(true);   // E ID Number*
+    expect(byCol.get(21)?.mandatory).toBe(true);  // V Mobile Phone*
+    expect(byCol.get(17)?.mandatory).toBe(true);  // R Email*
+    // Not starred in Mekome (may be empty)
+    expect(byCol.get(3)?.mandatory).toBe(false);  // D Date of Birth (no *)
+    expect(byCol.get(20)?.mandatory).toBe(false); // U home phone
+    expect(byCol.get(70)?.mandatory).toBe(false); // BS tags
   });
 });
 
