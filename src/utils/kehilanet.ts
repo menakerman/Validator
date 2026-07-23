@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import type { ColumnMapping, ColumnType, ParsedFile, ValidationResult } from '../types';
+import type { CellValidation, ColumnMapping, ColumnType, ParsedFile, ValidationResult } from '../types';
 import { readFileRows } from './excelParser';
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,11 @@ function col(letter: string): number {
   }
   return n - 1;
 }
+
+// Columns with cross-row / cross-field rules.
+const ID_COL = col('E');      // תעודת זהות — mandatory + unique
+const MOBILE_COL = col('V');  // טלפון נייד — unique
+const EMAIL_COL = col('R');   // דואר אלקטרוני — email-or-mobile pair
 
 interface KehilanetField {
   col: number;
@@ -88,12 +93,19 @@ export const MEKOME_COLUMNS: MekomeColumn[] = [
 ];
 
 // A Kehilanet source column is mandatory (may not be empty) only when its
-// Mekome target column is starred ("*") in the Hebrew header row.
+// Mekome target column is starred ("*") in the Hebrew header row. Email and
+// mobile are excluded here — they are governed together by the
+// "email or mobile required" cross-field rule instead.
 export const MANDATORY_SOURCES = new Set<number>(
   MEKOME_COLUMNS
     .filter((c) => c.source !== null && c.he.trim().endsWith('*'))
     .map((c) => c.source as number),
 );
+
+function isMandatory(colIndex: number): boolean {
+  if (colIndex === EMAIL_COL || colIndex === MOBILE_COL) return false;
+  return MANDATORY_SOURCES.has(colIndex);
+}
 
 function isKehilanetHeaderRow(row: string[]): boolean {
   const joined = row.map((c) => String(c).trim());
@@ -165,13 +177,78 @@ export function buildKehilanetMappings(parsed: ParsedFile): ColumnMapping[] {
       columnIndex: i,
       headerName: parsed.headers[i] ?? `Column ${i + 1}`,
       type: field ? field.type : 'ignore',
-      mandatory: field ? MANDATORY_SOURCES.has(field.col) : true,
+      mandatory: field ? isMandatory(field.col) : true,
       confidence: field ? 1 : 0,
       sampleValues,
       emptyValues: [],
     });
   }
   return mappings;
+}
+
+// Canonical forms for uniqueness comparison.
+function canonicalId(value: string): string {
+  return (value ?? '').replace(/\D/g, '').replace(/^0+/, '');
+}
+function canonicalPhone(value: string): string {
+  let x = (value ?? '').trim().replace(/[\s\-().]/g, '');
+  if (x.startsWith('+972')) x = '0' + x.slice(4);
+  else if (x.startsWith('972')) x = '0' + x.slice(3);
+  return x;
+}
+
+// Row indices that share a non-empty canonical value in the given column.
+function duplicateRows(data: string[][], colIndex: number, canonical: (v: string) => string): Set<number> {
+  const byValue = new Map<string, number[]>();
+  for (let r = 0; r < data.length; r++) {
+    const key = canonical(data[r]?.[colIndex] ?? '');
+    if (!key) continue;
+    const arr = byValue.get(key);
+    if (arr) arr.push(r);
+    else byValue.set(key, [r]);
+  }
+  const dupes = new Set<number>();
+  for (const rows of byValue.values()) {
+    if (rows.length > 1) for (const r of rows) dupes.add(r);
+  }
+  return dupes;
+}
+
+// Apply Kehilanet cross-row / cross-field rules on top of the per-cell results:
+//   - ID number must be unique
+//   - mobile phone must be unique
+//   - every row must have an email or a mobile phone
+// Expects freshly per-cell-validated cells; only upgrades cells to 'error'
+// (never hides an existing per-cell error such as an invalid check digit).
+export function applyKehilanetCrossRules(cells: CellValidation[], data: string[][]): CellValidation[] {
+  const indexByKey = new Map<string, number>();
+  cells.forEach((c, i) => indexByKey.set(`${c.row}-${c.column}`, i));
+  const next = cells.slice();
+
+  const setError = (row: number, column: number, message: string) => {
+    const i = indexByKey.get(`${row}-${column}`);
+    if (i === undefined) return;
+    if (next[i].status === 'error') return; // keep the more specific per-cell error
+    next[i] = { ...next[i], status: 'error', message };
+  };
+
+  for (const r of duplicateRows(data, ID_COL, canonicalId)) {
+    setError(r, ID_COL, 'validators.id.duplicate');
+  }
+  for (const r of duplicateRows(data, MOBILE_COL, canonicalPhone)) {
+    setError(r, MOBILE_COL, 'validators.phone.duplicate');
+  }
+
+  for (let r = 0; r < data.length; r++) {
+    const hasEmail = (data[r]?.[EMAIL_COL] ?? '').trim() !== '';
+    const hasMobile = (data[r]?.[MOBILE_COL] ?? '').trim() !== '';
+    if (!hasEmail && !hasMobile) {
+      setError(r, EMAIL_COL, 'validators.kehilanet.emailOrPhone');
+      setError(r, MOBILE_COL, 'validators.kehilanet.emailOrPhone');
+    }
+  }
+
+  return next;
 }
 
 function tagsTransform(value: string): string {

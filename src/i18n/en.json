@@ -96,6 +96,7 @@
       "invalidLength": "ID number must be up to 9 digits",
       "nonNumeric": "ID number must contain only digits",
       "allZeros": "ID number cannot be all zeros",
+      "duplicate": "Duplicate ID number - must be unique",
       "empty": "Empty ID number"
     },
     "phone": {
@@ -104,6 +105,7 @@
       "invalidPrefix": "Unrecognized phone prefix",
       "invalidLength": "Phone number must be 10 digits (including prefix)",
       "nonNumeric": "Phone number must contain only digits",
+      "duplicate": "Duplicate mobile number - must be unique",
       "empty": "Empty phone number"
     },
     "landline": {
@@ -149,6 +151,9 @@
       "invalidLength": "Invalid phone number length",
       "nonNumeric": "Phone number must contain only digits",
       "empty": "Empty phone number"
+    },
+    "kehilanet": {
+      "emailOrPhone": "Email or mobile phone is required"
     }
   }
 }
