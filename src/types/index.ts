@@ -55,6 +55,15 @@ export interface ParsedFile {
 
 export type AppStep = 'upload' | 'mapping' | 'validating' | 'results';
 
+export interface HistoryEntry {
+  id: string;
+  fileName: string;
+  mode: AppMode;
+  timestamp: number;
+  totalRows: number;
+  errorRows: number;
+}
+
 export type ResultFilter = 'all' | 'valid' | 'warning' | 'error';
 
 export interface ValidatorState {

@@ -8,14 +8,22 @@
     "en": "English"
   },
   "upload": {
-    "title": "Upload File",
+    "title": "Choose an action",
+    "subtitle": "Convert a Kehilanet export to Mekome format, or validate an Excel file",
     "dropzone": "Drag and drop an Excel file here",
+    "dropHint": "Drag a file here to upload",
     "or": "or",
     "browse": "Browse Files",
-    "formats": "Supported formats: .xlsx, .xls, .csv",
+    "formats": "Supported formats: .xlsx, .xls, .csv · up to 50MB",
     "maxSize": "Maximum size: 50MB",
+    "validate": {
+      "title": "Validate data",
+      "description": "Check IDs, phone numbers, emails and dates in an Excel file"
+    },
     "kehilanet": {
-      "description": "Have a Kehilanet export? Convert it to Mekome format",
+      "title": "Kehilanet to Mekome",
+      "description": "Convert a Kehilanet export into the Mekome import format, with validation",
+      "badge": "Convert + validate",
       "button": "Convert Kehilanet file to Mekome"
     },
     "error": {
@@ -24,6 +32,21 @@
       "parseError": "Error reading file. Make sure the file is valid",
       "empty": "File is empty or contains no data",
       "notKehilanet": "This is not a valid Kehilanet file (Kehilanet header row not found)"
+    }
+  },
+  "recent": {
+    "title": "Recent actions",
+    "clear": "Clear history",
+    "conversion": "Kehilanet",
+    "validation": "Validation",
+    "rows": "{{count}} rows",
+    "errors": "{{count}} errors",
+    "allValid": "All valid",
+    "time": {
+      "now": "just now",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
     }
   },
   "mapping": {

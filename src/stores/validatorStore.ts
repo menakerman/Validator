@@ -5,6 +5,7 @@ import type {
   CellValidation,
   ColumnMapping,
   ColumnType,
+  HistoryEntry,
   ParsedFile,
   PerColumnSummary,
   ResultFilter,
@@ -19,6 +20,33 @@ import { parseKehilanetFile, buildKehilanetMappings, applyKehilanetCrossRules } 
 
 const WORKER_THRESHOLD = 10000;
 
+const HISTORY_KEY = 'validator_history';
+const MAX_HISTORY = 8;
+
+function loadHistory(): HistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history: HistoryEntry[]): void {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch {
+    // ignore storage errors (private mode, quota, ...)
+  }
+}
+
+function countErrorRows(cells: CellValidation[]): number {
+  const rows = new Set<number>();
+  for (const c of cells) if (c.status === 'error') rows.add(c.row);
+  return rows.size;
+}
+
 interface ValidatorStore {
   step: AppStep;
   mode: AppMode;
@@ -29,6 +57,7 @@ interface ValidatorStore {
   resultFilter: ResultFilter;
   currentPage: number;
   error: string | null;
+  history: HistoryEntry[];
 
   parseFile: (file: File) => Promise<void>;
   parseKehilanet: (file: File) => Promise<void>;
@@ -41,10 +70,29 @@ interface ValidatorStore {
   updateCellValue: (row: number, column: number, newValue: string) => void;
   setResultFilter: (filter: ResultFilter) => void;
   setCurrentPage: (page: number) => void;
+  clearHistory: () => void;
   reset: () => void;
 }
 
-export const useValidatorStore = create<ValidatorStore>((set, get) => ({
+export const useValidatorStore = create<ValidatorStore>((set, get) => {
+  // Persist a completed validation/conversion into recent-actions history.
+  const recordHistory = (cells: CellValidation[]): HistoryEntry[] => {
+    const { parsedFile, mode, history } = get();
+    if (!parsedFile) return history;
+    const entry: HistoryEntry = {
+      id: `${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+      fileName: parsedFile.fileName,
+      mode,
+      timestamp: Date.now(),
+      totalRows: parsedFile.totalRows,
+      errorRows: countErrorRows(cells),
+    };
+    const next = [entry, ...history].slice(0, MAX_HISTORY);
+    saveHistory(next);
+    return next;
+  };
+
+  return {
   step: 'upload',
   mode: 'validate',
   parsedFile: null,
@@ -54,6 +102,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   resultFilter: 'all',
   currentPage: 1,
   error: null,
+  history: loadHistory(),
 
   parseFile: async (file: File) => {
     try {
@@ -144,6 +193,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
             step: 'results',
             currentPage: 1,
             resultFilter: 'all',
+            history: recordHistory(cells),
           });
           worker.terminate();
         }
@@ -188,6 +238,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
             step: 'results',
             currentPage: 1,
             resultFilter: 'all',
+            history: recordHistory(finalCells),
           });
         }
       };
@@ -317,6 +368,11 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
     set({ currentPage: page });
   },
 
+  clearHistory: () => {
+    saveHistory([]);
+    set({ history: [] });
+  },
+
   reset: () => {
     set({
       step: 'upload',
@@ -331,7 +387,8 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
     });
   },
 
-}));
+  };
+});
 
 export const ROWS_PER_PAGE = 100;
 
