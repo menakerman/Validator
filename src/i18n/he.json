@@ -78,6 +78,11 @@
     },
     "export": "ייצוא לאקסל",
     "exportMekome": "ייצוא לקובץ מקומי",
+    "mekomeScope": {
+      "all": "כל השורות ({{count}})",
+      "valid": "שורות תקינות בלבד ({{count}})",
+      "errors": "שורות עם שגיאות בלבד ({{count}})"
+    },
     "exporting": "מייצא...",
     "fix": "תקן",
     "fixAll": "תקן הכל ({{count}})",

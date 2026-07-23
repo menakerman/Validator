@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import type { ColumnMapping, ColumnType, ParsedFile } from '../types';
+import type { ColumnMapping, ColumnType, ParsedFile, ValidationResult } from '../types';
 import { readFileRows } from './excelParser';
 
 // ---------------------------------------------------------------------------
@@ -183,8 +183,77 @@ export function mekomeRow(row: string[]): string[] {
   return MEKOME_COLUMNS.map((c) => mekomeValue(c, row));
 }
 
+// Which rows to include in a Mekome export.
+export type MekomeExportScope = 'all' | 'valid' | 'errors';
+
+const ERROR_FILL: ExcelJS.FillPattern = {
+  type: 'pattern',
+  pattern: 'solid',
+  fgColor: { argb: 'FFFFC7CE' },
+};
+const ERROR_FONT: Partial<ExcelJS.Font> = { color: { argb: 'FF9C0006' } };
+
+// Map each Kehilanet source column to its Mekome output column index, so a
+// validation error on a source cell can be highlighted in the output.
+const SOURCE_TO_MEKOME = new Map<number, number>();
+MEKOME_COLUMNS.forEach((c, i) => {
+  if (c.source !== null && !SOURCE_TO_MEKOME.has(c.source)) SOURCE_TO_MEKOME.set(c.source, i);
+});
+
+// Group validation errors by row: row index -> set of erroring Kehilanet columns.
+export function errorsByRow(result: ValidationResult): Map<number, Set<number>> {
+  const map = new Map<number, Set<number>>();
+  for (const cell of result.cells) {
+    if (cell.status !== 'error') continue;
+    let cols = map.get(cell.row);
+    if (!cols) {
+      cols = new Set();
+      map.set(cell.row, cols);
+    }
+    cols.add(cell.column);
+  }
+  return map;
+}
+
+// The data-row indices to include for a given export scope.
+export function selectExportRows(
+  parsed: ParsedFile,
+  result: ValidationResult,
+  scope: MekomeExportScope,
+): number[] {
+  const rowErrors = errorsByRow(result);
+  const indices: number[] = [];
+  for (let rowIdx = 0; rowIdx < parsed.data.length; rowIdx++) {
+    const hasError = rowErrors.has(rowIdx);
+    if (scope === 'valid' && hasError) continue;
+    if (scope === 'errors' && !hasError) continue;
+    indices.push(rowIdx);
+  }
+  return indices;
+}
+
+// Map erroring Kehilanet source columns to the Mekome output column indices
+// that should be highlighted (source columns not present in the output are
+// silently skipped).
+export function mekomeErrorColumns(kehilanetCols: Iterable<number>): number[] {
+  const out: number[] = [];
+  for (const kehCol of kehilanetCols) {
+    const mekomeIdx = SOURCE_TO_MEKOME.get(kehCol);
+    if (mekomeIdx !== undefined) out.push(mekomeIdx);
+  }
+  return out;
+}
+
 // Build and download the Mekome import file from parsed Kehilanet data.
-export async function exportMekomeFile(parsed: ParsedFile): Promise<void> {
+// `scope` selects which rows to include; in the 'errors' scope the offending
+// cells are highlighted red in the output file.
+export async function exportMekomeFile(
+  parsed: ParsedFile,
+  result: ValidationResult,
+  scope: MekomeExportScope = 'all',
+): Promise<void> {
+  const rowErrors = errorsByRow(result);
+
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Sheet1', {
     views: [{ rightToLeft: true }],
@@ -195,8 +264,20 @@ export async function exportMekomeFile(parsed: ParsedFile): Promise<void> {
   sheet.getRow(1).font = { bold: true };
   sheet.getRow(2).font = { bold: true };
 
-  for (const row of parsed.data) {
-    sheet.addRow(mekomeRow(row));
+  for (const rowIdx of selectExportRows(parsed, result, scope)) {
+    const excelRow = sheet.addRow(mekomeRow(parsed.data[rowIdx]));
+
+    // Highlight erroring cells when exporting the error rows.
+    if (scope === 'errors') {
+      const errorCols = rowErrors.get(rowIdx);
+      if (errorCols) {
+        for (const mekomeIdx of mekomeErrorColumns(errorCols)) {
+          const cell = excelRow.getCell(mekomeIdx + 1);
+          cell.fill = ERROR_FILL;
+          cell.font = ERROR_FONT;
+        }
+      }
+    }
   }
 
   sheet.columns.forEach((column) => {
@@ -216,7 +297,7 @@ export async function exportMekomeFile(parsed: ParsedFile): Promise<void> {
   const a = document.createElement('a');
   const baseName = parsed.fileName.replace(/\.[^.]+$/, '');
   a.href = url;
-  a.download = `mekome_${baseName}.xlsx`;
+  a.download = `mekome_${scope}_${baseName}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }

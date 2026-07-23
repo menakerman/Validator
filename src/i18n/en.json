@@ -78,6 +78,11 @@
     },
     "export": "Export to Excel",
     "exportMekome": "Export Mekome File",
+    "mekomeScope": {
+      "all": "All rows ({{count}})",
+      "valid": "Valid rows only ({{count}})",
+      "errors": "Error rows only ({{count}})"
+    },
     "exporting": "Exporting...",
     "fix": "Fix",
     "fixAll": "Fix All ({{count}})",

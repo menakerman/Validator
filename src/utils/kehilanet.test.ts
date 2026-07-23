@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { mekomeRow, buildKehilanetMappings, MEKOME_COLUMNS } from './kehilanet';
-import type { ParsedFile } from '../types';
+import {
+  mekomeRow,
+  buildKehilanetMappings,
+  selectExportRows,
+  mekomeErrorColumns,
+  MEKOME_COLUMNS,
+} from './kehilanet';
+import type { CellValidation, ParsedFile, ValidationResult } from '../types';
 
 // Build a sparse 71-column Kehilanet row from {colIndex: value} pairs.
 function kehRow(values: Record<number, string>): string[] {
@@ -88,5 +94,51 @@ describe('buildKehilanetMappings', () => {
     const byCol = new Map(mappings.map((m) => [m.columnIndex, m]));
     expect(byCol.get(4)?.mandatory).toBe(true);   // ID
     expect(byCol.get(20)?.mandatory).toBe(false); // home phone (optional)
+  });
+});
+
+describe('selectExportRows', () => {
+  const parsed: ParsedFile = {
+    fileName: 'k.xlsx',
+    headers: new Array(71).fill(''),
+    data: [kehRow({}), kehRow({}), kehRow({}), kehRow({})], // 4 rows
+    totalRows: 4,
+  };
+  // Rows 1 and 3 have an error on Kehilanet column E (ID, index 4).
+  const cell = (row: number, column: number, status: CellValidation['status']): CellValidation => ({
+    row, column, originalValue: '', status, message: '',
+  });
+  const result: ValidationResult = {
+    cells: [
+      cell(0, 4, 'valid'),
+      cell(1, 4, 'error'),
+      cell(2, 4, 'warning'),
+      cell(3, 4, 'error'),
+    ],
+    summary: { totalCells: 4, validCount: 1, warningCount: 1, errorCount: 2, perColumn: [] },
+  };
+
+  it('all -> every row', () => {
+    expect(selectExportRows(parsed, result, 'all')).toEqual([0, 1, 2, 3]);
+  });
+
+  it('valid -> rows without errors (warnings still count as valid)', () => {
+    expect(selectExportRows(parsed, result, 'valid')).toEqual([0, 2]);
+  });
+
+  it('errors -> only rows with at least one error', () => {
+    expect(selectExportRows(parsed, result, 'errors')).toEqual([1, 3]);
+  });
+});
+
+describe('mekomeErrorColumns', () => {
+  it('maps erroring Kehilanet source columns to Mekome output indices', () => {
+    // E(4) -> ID Number (5), R(17) -> Email (11)
+    expect(mekomeErrorColumns([4, 17]).sort((a, b) => a - b)).toEqual([5, 11]);
+  });
+
+  it('skips source columns that are not present in the Mekome output', () => {
+    // M(12) and AQ(42) are validated but not exported to Mekome.
+    expect(mekomeErrorColumns([12, 42])).toEqual([]);
   });
 });
