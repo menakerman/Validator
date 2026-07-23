@@ -4,8 +4,10 @@ import {
   buildKehilanetMappings,
   selectExportRows,
   mekomeErrorColumns,
+  applyKehilanetCrossRules,
   MEKOME_COLUMNS,
 } from './kehilanet';
+import { validate } from '../validators';
 import type { CellValidation, ParsedFile, ValidationResult } from '../types';
 
 // Build a sparse 71-column Kehilanet row from {colIndex: value} pairs.
@@ -92,12 +94,14 @@ describe('buildKehilanetMappings', () => {
 
   it('marks a column mandatory only when its Mekome target is starred', () => {
     const byCol = new Map(mappings.map((m) => [m.columnIndex, m]));
-    // Starred in Mekome (may not be empty): B, C, E, V, R
+    // Starred in Mekome and independently mandatory: B, C, E
     expect(byCol.get(1)?.mandatory).toBe(true);   // B First Name*
     expect(byCol.get(2)?.mandatory).toBe(true);   // C Last Name*
     expect(byCol.get(4)?.mandatory).toBe(true);   // E ID Number*
-    expect(byCol.get(21)?.mandatory).toBe(true);  // V Mobile Phone*
-    expect(byCol.get(17)?.mandatory).toBe(true);  // R Email*
+    // Email (R) and Mobile (V) are starred but handled by the
+    // "email or mobile required" cross-rule, so not independently mandatory.
+    expect(byCol.get(21)?.mandatory).toBe(false); // V Mobile Phone*
+    expect(byCol.get(17)?.mandatory).toBe(false); // R Email*
     // Not starred in Mekome (may be empty)
     expect(byCol.get(3)?.mandatory).toBe(false);  // D Date of Birth (no *)
     expect(byCol.get(20)?.mandatory).toBe(false); // U home phone
@@ -148,5 +152,74 @@ describe('mekomeErrorColumns', () => {
   it('skips source columns that are not present in the Mekome output', () => {
     // M(12) and AQ(42) are validated but not exported to Mekome.
     expect(mekomeErrorColumns([12, 42])).toEqual([]);
+  });
+});
+
+describe('applyKehilanetCrossRules', () => {
+  const E = 4, R = 17, V = 21; // ID, Email, Mobile column indices
+
+  // Base-validate the columns involved in the cross rules for a data set.
+  function baseCells(data: string[][]): CellValidation[] {
+    const cells: CellValidation[] = [];
+    for (let r = 0; r < data.length; r++) {
+      cells.push(validate(data[r][E] ?? '', 'id', r, E, true, []));
+      cells.push(validate(data[r][R] ?? '', 'email', r, R, false, []));
+      cells.push(validate(data[r][V] ?? '', 'phone', r, V, false, []));
+    }
+    return cells;
+  }
+  const row = (id: string, email: string, mobile: string) => {
+    const a = new Array(71).fill('');
+    a[E] = id; a[R] = email; a[V] = mobile;
+    return a;
+  };
+  const cellAt = (cells: CellValidation[], r: number, c: number) =>
+    cells.find((x) => x.row === r && x.column === c)!;
+
+  it('flags duplicate ID numbers (ignoring leading zeros)', () => {
+    const data = [
+      row('036269827', 'a@x.com', '0501111111'),
+      row('36269827', 'b@x.com', '0502222222'),   // same ID, no leading zero
+      row('036202307', 'c@x.com', '0503333333'),  // different valid ID
+    ];
+    const out = applyKehilanetCrossRules(baseCells(data), data);
+    expect(cellAt(out, 0, E)).toMatchObject({ status: 'error', message: 'validators.id.duplicate' });
+    expect(cellAt(out, 1, E)).toMatchObject({ status: 'error', message: 'validators.id.duplicate' });
+    expect(cellAt(out, 2, E).status).not.toBe('error');
+  });
+
+  it('flags duplicate mobile numbers (normalizing +972)', () => {
+    const data = [
+      row('012345671', 'a@x.com', '0501234567'),
+      row('036269827', 'b@x.com', '+972501234567'), // same mobile
+    ];
+    const out = applyKehilanetCrossRules(baseCells(data), data);
+    expect(cellAt(out, 0, V)).toMatchObject({ status: 'error', message: 'validators.phone.duplicate' });
+    expect(cellAt(out, 1, V)).toMatchObject({ status: 'error', message: 'validators.phone.duplicate' });
+  });
+
+  it('requires an email or a mobile phone', () => {
+    const data = [
+      row('012345671', '', ''),            // neither -> error on both
+      row('036269827', 'has@x.com', ''),   // email only -> ok
+      row('108241902', '', '0504444444'),  // mobile only -> ok
+    ];
+    const out = applyKehilanetCrossRules(baseCells(data), data);
+    expect(cellAt(out, 0, R)).toMatchObject({ status: 'error', message: 'validators.kehilanet.emailOrPhone' });
+    expect(cellAt(out, 0, V)).toMatchObject({ status: 'error', message: 'validators.kehilanet.emailOrPhone' });
+    expect(cellAt(out, 1, R).status).not.toBe('error');
+    expect(cellAt(out, 1, V).status).not.toBe('error');
+    expect(cellAt(out, 2, R).status).not.toBe('error');
+    expect(cellAt(out, 2, V).status).not.toBe('error');
+  });
+
+  it('does not override a more specific per-cell error', () => {
+    const data = [
+      row('111111111', 'a@x.com', '0501234567'), // invalid check digit
+      row('111111111', 'b@x.com', '0502222222'), // duplicate of the invalid ID
+    ];
+    const out = applyKehilanetCrossRules(baseCells(data), data);
+    // Keeps the check-digit error rather than replacing it with 'duplicate'.
+    expect(cellAt(out, 0, E)).toMatchObject({ status: 'error', message: 'validators.id.invalidCheckDigit' });
   });
 });

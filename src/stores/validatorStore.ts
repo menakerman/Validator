@@ -15,7 +15,7 @@ import type {
 import { validate } from '../validators';
 import { parseExcelFile } from '../utils/excelParser';
 import { detectColumnTypes } from '../utils/columnDetector';
-import { parseKehilanetFile, buildKehilanetMappings } from '../utils/kehilanet';
+import { parseKehilanetFile, buildKehilanetMappings, applyKehilanetCrossRules } from '../utils/kehilanet';
 
 const WORKER_THRESHOLD = 10000;
 
@@ -112,7 +112,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   },
 
   runValidation: () => {
-    const { parsedFile, columnMappings } = get();
+    const { parsedFile, columnMappings, mode } = get();
     if (!parsedFile) return;
 
     const activeMappings = columnMappings.filter((m) => m.type !== 'ignore');
@@ -132,8 +132,14 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
         if (msg.type === 'progress') {
           set({ validationProgress: msg.percent });
         } else if (msg.type === 'result') {
+          const cells = mode === 'kehilanet'
+            ? applyKehilanetCrossRules(msg.cells, parsedFile.data)
+            : msg.cells;
+          const summary = mode === 'kehilanet'
+            ? buildSummary(cells, activeMappings)
+            : msg.summary;
           set({
-            validationResult: { cells: msg.cells, summary: msg.summary },
+            validationResult: { cells, summary },
             validationProgress: 100,
             step: 'results',
             currentPage: 1,
@@ -172,10 +178,12 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
         if (rowIdx < totalRows) {
           requestAnimationFrame(processBatch);
         } else {
-          // Build summary
-          const summary = buildSummary(cells, activeMappings);
+          const finalCells = mode === 'kehilanet'
+            ? applyKehilanetCrossRules(cells, data)
+            : cells;
+          const summary = buildSummary(finalCells, activeMappings);
           set({
-            validationResult: { cells, summary },
+            validationResult: { cells: finalCells, summary },
             validationProgress: 100,
             step: 'results',
             currentPage: 1,
@@ -189,7 +197,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   },
 
   applySuggestion: (row: number, column: number) => {
-    const { parsedFile, validationResult, columnMappings } = get();
+    const { parsedFile, validationResult, columnMappings, mode } = get();
     if (!parsedFile || !validationResult) return;
 
     const cellIdx = validationResult.cells.findIndex(
@@ -205,12 +213,21 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
     const newData = parsedFile.data.map((r) => [...r]);
     newData[row][column] = cell.suggestion!;
 
+    const activeMappings = columnMappings.filter((m) => m.type !== 'ignore');
+
+    if (mode === 'kehilanet') {
+      set({
+        parsedFile: { ...parsedFile, data: newData },
+        validationResult: buildKehilanetResult(newData, activeMappings),
+      });
+      return;
+    }
+
     // Re-validate the fixed cell
     const newCell = validate(cell.suggestion!, mapping.type, row, column, mapping.mandatory, mapping.emptyValues);
     const newCells = [...validationResult.cells];
     newCells[cellIdx] = newCell;
 
-    const activeMappings = columnMappings.filter((m) => m.type !== 'ignore');
     const summary = buildSummary(newCells, activeMappings);
 
     set({
@@ -220,7 +237,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   },
 
   updateCellValue: (row: number, column: number, newValue: string) => {
-    const { parsedFile, validationResult, columnMappings } = get();
+    const { parsedFile, validationResult, columnMappings, mode } = get();
     if (!parsedFile || !validationResult) return;
 
     const cellIdx = validationResult.cells.findIndex(
@@ -234,11 +251,20 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
     const newData = parsedFile.data.map((r) => [...r]);
     newData[row][column] = newValue;
 
+    const activeMappings = columnMappings.filter((m) => m.type !== 'ignore');
+
+    if (mode === 'kehilanet') {
+      set({
+        parsedFile: { ...parsedFile, data: newData },
+        validationResult: buildKehilanetResult(newData, activeMappings),
+      });
+      return;
+    }
+
     const newCell = validate(newValue, mapping.type, row, column, mapping.mandatory, mapping.emptyValues);
     const newCells = [...validationResult.cells];
     newCells[cellIdx] = newCell;
 
-    const activeMappings = columnMappings.filter((m) => m.type !== 'ignore');
     const summary = buildSummary(newCells, activeMappings);
 
     set({
@@ -248,7 +274,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
   },
 
   applyAllSuggestions: () => {
-    const { parsedFile, validationResult, columnMappings } = get();
+    const { parsedFile, validationResult, columnMappings, mode } = get();
     if (!parsedFile || !validationResult) return;
 
     const newData = parsedFile.data.map((r) => [...r]);
@@ -266,6 +292,15 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
     }
 
     const activeMappings = columnMappings.filter((m) => m.type !== 'ignore');
+
+    if (mode === 'kehilanet') {
+      set({
+        parsedFile: { ...parsedFile, data: newData },
+        validationResult: buildKehilanetResult(newData, activeMappings),
+      });
+      return;
+    }
+
     const summary = buildSummary(newCells, activeMappings);
 
     set({
@@ -299,6 +334,23 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => ({
 }));
 
 export const ROWS_PER_PAGE = 100;
+
+// Full recompute for Kehilanet mode: per-cell validation followed by the
+// cross-row / cross-field rules. Used whenever data changes, since edits can
+// affect uniqueness of other rows.
+function buildKehilanetResult(
+  data: string[][],
+  activeMappings: ColumnMapping[],
+): ValidationResult {
+  const cells: CellValidation[] = [];
+  for (let r = 0; r < data.length; r++) {
+    for (const m of activeMappings) {
+      cells.push(validate(data[r][m.columnIndex] ?? '', m.type, r, m.columnIndex, m.mandatory, m.emptyValues));
+    }
+  }
+  const finalCells = applyKehilanetCrossRules(cells, data);
+  return { cells: finalCells, summary: buildSummary(finalCells, activeMappings) };
+}
 
 function buildSummary(
   cells: CellValidation[],
