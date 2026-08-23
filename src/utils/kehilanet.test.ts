@@ -6,6 +6,10 @@ import {
   mekomeErrorColumns,
   applyKehilanetCrossRules,
   MEKOME_COLUMNS,
+  CHILDREN_COLUMNS,
+  parentIdColumns,
+  childRowsForPerson,
+  childrenErrorColumns,
 } from './kehilanet';
 import { validate } from '../validators';
 import type { CellValidation, ParsedFile, ValidationResult } from '../types';
@@ -221,5 +225,76 @@ describe('applyKehilanetCrossRules', () => {
     const out = applyKehilanetCrossRules(baseCells(data), data);
     // Keeps the check-digit error rather than replacing it with 'duplicate'.
     expect(cellAt(out, 0, E)).toMatchObject({ status: 'error', message: 'validators.id.invalidCheckDigit' });
+  });
+});
+
+describe('children export', () => {
+  // Column indices in the 71-column layout: B=1 C=2 D=3 E=4 T=19 V=21 AK=36.
+  // Parent-ID columns are resolved by header text, not a fixed index; place them
+  // at arbitrary positions to prove the lookup is header-driven.
+  const P1 = 43;
+  const P2 = 44;
+  const headers = (() => {
+    const h = new Array(71).fill('');
+    h[P1] = 'ת.ז. הורה 1*';
+    h[P2] = 'ת.ז. הורה 2*';
+    h[38] = 'מספר הורה 1'; // parent serial — must NOT be treated as a parent ID
+    return h;
+  })();
+
+  const child = kehRow({
+    1: 'שאול',
+    2: 'סיני',
+    3: '10/05/2003',
+    4: '23123223',
+    19: 'חן',
+    21: '+972507955877',
+    36: 'זכר',
+    [P1]: '123456789',
+    [P2]: '987654321',
+  });
+
+  it('has the 8 children columns matching the sample header', () => {
+    expect(CHILDREN_COLUMNS.map((c) => c.he)).toEqual([
+      'תעודת זהות הורה*',
+      'תעודת זהות ילד*',
+      'שם פרטי ילד*',
+      'שם משפחה ילד*',
+      'שם אמצעי ילד',
+      'נייד ילד',
+      'תאריך לידה ילד',
+      'מגדר ילד',
+    ]);
+  });
+
+  it('resolves parent-ID columns by header, excluding "מספר הורה"', () => {
+    expect(parentIdColumns(headers)).toEqual([P1, P2]);
+  });
+
+  it('emits one row per named parent with child identity fields', () => {
+    const rows = childRowsForPerson(child, [P1, P2]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual([
+      '123456789', '23123223', 'שאול', 'סיני', 'חן', '+972507955877', '10/05/2003', 'זכר',
+    ]);
+    expect(rows[1][0]).toBe('987654321'); // second row links to parent 2
+    expect(rows[1].slice(1)).toEqual(rows[0].slice(1)); // same child fields
+  });
+
+  it('skips people with no parent named', () => {
+    const orphan = kehRow({ 1: 'דן', 4: '111' });
+    expect(childRowsForPerson(orphan, [P1, P2])).toHaveLength(0);
+  });
+
+  it('emits a single row when only one parent is filled', () => {
+    const oneParent = kehRow({ 4: '55', [P1]: '123456789' });
+    const rows = childRowsForPerson(oneParent, [P1, P2]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0][0]).toBe('123456789');
+  });
+
+  it('maps erroring child source columns to output columns (parent skipped)', () => {
+    // E (Child ID) -> col 1, V (Mobile) -> col 5; parent cols map to nothing.
+    expect(childrenErrorColumns([4, 21, P1]).sort((a, b) => a - b)).toEqual([1, 5]);
   });
 });
