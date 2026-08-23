@@ -24,6 +24,15 @@ const ID_COL = col('E');      // תעודת זהות — mandatory + unique
 const MOBILE_COL = col('V');  // טלפון נייד — unique
 const EMAIL_COL = col('R');   // דואר אלקטרוני — email-or-mobile pair
 
+// Child-identity source columns in the 71-column Kehilanet layout, reused by the
+// children export below. These are the same indices the Mekome mapping uses for
+// the person's own name/DOB/mobile/gender fields.
+const FIRST_COL = col('B');   // שם פרטי
+const LAST_COL = col('C');    // שם משפחה
+const DOB_COL = col('D');     // תאריך לידה
+const MIDDLE_COL = col('T');  // שם נעורים → שם אמצעי
+const GENDER_COL = col('AK'); // מין
+
 interface KehilanetField {
   col: number;
   type: ColumnType;
@@ -384,6 +393,151 @@ export async function exportMekomeFile(
   const baseName = parsed.fileName.replace(/\.[^.]+$/, '');
   a.href = url;
   a.download = `mekome_${scope}_${baseName}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// Kehilanet → Children ("ייבוא ילדים") conversion.
+//
+// The children import links a parent to a child: one output row per
+// parent-child relationship. A Kehilanet person row carries its parents' ID
+// numbers ("ת.ז. הורה 1" / "ת.ז. הורה 2"), so every person that names a parent
+// IS a child from that parent's perspective. A person with both parents filled
+// produces two rows (one per parent). All child identity fields come from the
+// person's own row.
+// ---------------------------------------------------------------------------
+
+interface ChildrenColumn {
+  en: string;
+  he: string;
+  source: number | null; // fixed child-identity source column, or null (parent, resolved per file)
+}
+
+// The children import layout: two header rows (English, then Hebrew) followed by
+// data, matching update_sample_children.xlsx. The Parent ID column has no fixed
+// source — it is filled per output row from the resolved parent column.
+export const CHILDREN_COLUMNS: ChildrenColumn[] = [
+  { en: 'Parent ID', he: 'תעודת זהות הורה*', source: null },
+  { en: 'Child ID', he: 'תעודת זהות ילד*', source: ID_COL },
+  { en: 'Child First Name', he: 'שם פרטי ילד*', source: FIRST_COL },
+  { en: 'Child Last Name', he: 'שם משפחה ילד*', source: LAST_COL },
+  { en: 'Child Middle Name', he: 'שם אמצעי ילד', source: MIDDLE_COL },
+  { en: 'Child Mobile', he: 'נייד ילד', source: MOBILE_COL },
+  { en: 'Child Date of Birth', he: 'תאריך לידה ילד', source: DOB_COL },
+  { en: 'Child Gender', he: 'מגדר ילד', source: GENDER_COL },
+];
+
+// Locate the parent-ID columns by header text rather than by fixed index: the
+// 71-column export places "ת.ז. הורה 1" / "ת.ז. הורה 2" at positions that vary
+// between export variants, but parseKehilanetFile preserves the real headers.
+// A parent-ID header mentions a parent ("הורה") together with an ID token
+// ("ת.ז"/"תעודת זהות"), which excludes the "מספר הורה N" (parent serial) columns.
+// Returned in column order, so parent 1 precedes parent 2.
+export function parentIdColumns(headers: string[]): number[] {
+  const out: number[] = [];
+  headers.forEach((h, i) => {
+    const n = String(h).replace(/["'*]/g, '').replace(/\s+/g, ' ').trim();
+    const isParent = n.includes('הורה');
+    const isId = /ת\.?ז\.?/.test(n) || n.includes('תעודת זהות');
+    if (isParent && isId) out.push(i);
+  });
+  return out;
+}
+
+// Expand a single Kehilanet person row into its children-import rows: one row
+// per non-empty parent ID found in `parentCols`. A person with no parent named
+// produces no rows (they are not a child of anyone in this file).
+export function childRowsForPerson(row: string[], parentCols: number[]): string[][] {
+  const rows: string[][] = [];
+  for (const pc of parentCols) {
+    const parentId = String(row[pc] ?? '').trim();
+    if (!parentId) continue;
+    rows.push(
+      CHILDREN_COLUMNS.map((c) => (c.source === null ? parentId : String(row[c.source] ?? ''))),
+    );
+  }
+  return rows;
+}
+
+// Map each Kehilanet source column to its children output column index, so a
+// validation error on a source cell can be highlighted in the output.
+const SOURCE_TO_CHILDREN = new Map<number, number>();
+CHILDREN_COLUMNS.forEach((c, i) => {
+  if (c.source !== null && !SOURCE_TO_CHILDREN.has(c.source)) SOURCE_TO_CHILDREN.set(c.source, i);
+});
+
+// Map erroring Kehilanet source columns to the children output column indices
+// that should be highlighted (source columns not present in the output, and the
+// parent columns, are silently skipped).
+export function childrenErrorColumns(kehilanetCols: Iterable<number>): number[] {
+  const out: number[] = [];
+  for (const kehCol of kehilanetCols) {
+    const childIdx = SOURCE_TO_CHILDREN.get(kehCol);
+    if (childIdx !== undefined) out.push(childIdx);
+  }
+  return out;
+}
+
+// Build and download the children import file from parsed Kehilanet data.
+// `scope` selects which source person rows to include (same semantics as the
+// Mekome export); each selected person expands to one row per named parent. In
+// the 'errors' scope the offending child cells are highlighted red.
+export async function exportChildrenFile(
+  parsed: ParsedFile,
+  result: ValidationResult,
+  scope: MekomeExportScope = 'all',
+): Promise<void> {
+  const parentCols = parentIdColumns(parsed.headers);
+  const rowErrors = errorsByRow(result);
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Sheet1', {
+    views: [{ rightToLeft: true }],
+  });
+
+  sheet.addRow(CHILDREN_COLUMNS.map((c) => c.en));
+  sheet.addRow(CHILDREN_COLUMNS.map((c) => c.he));
+  sheet.getRow(1).font = { bold: true };
+  sheet.getRow(2).font = { bold: true };
+
+  for (const rowIdx of selectExportRows(parsed, result, scope)) {
+    const childRows = childRowsForPerson(parsed.data[rowIdx], parentCols);
+    for (const values of childRows) {
+      const excelRow = sheet.addRow(values);
+
+      // Highlight erroring cells when exporting the error rows.
+      if (scope === 'errors') {
+        const errorCols = rowErrors.get(rowIdx);
+        if (errorCols) {
+          for (const childIdx of childrenErrorColumns(errorCols)) {
+            const cell = excelRow.getCell(childIdx + 1);
+            cell.fill = ERROR_FILL;
+            cell.font = ERROR_FONT;
+          }
+        }
+      }
+    }
+  }
+
+  sheet.columns.forEach((column) => {
+    let maxLength = 12;
+    column.eachCell?.({ includeEmpty: false }, (cell) => {
+      const length = String(cell.value ?? '').length;
+      if (length > maxLength) maxLength = length;
+    });
+    column.width = Math.min(maxLength + 2, 40);
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const baseName = parsed.fileName.replace(/\.[^.]+$/, '');
+  a.href = url;
+  a.download = `children_${scope}_${baseName}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }

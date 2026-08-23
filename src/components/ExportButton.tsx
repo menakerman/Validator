@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useValidatorStore } from '../stores/validatorStore';
 import { exportValidatedExcel } from '../utils/excelExporter';
-import { exportMekomeFile, type MekomeExportScope } from '../utils/kehilanet';
+import { exportMekomeFile, exportChildrenFile, type MekomeExportScope } from '../utils/kehilanet';
 
 export function ExportButton() {
   const { t } = useTranslation();
@@ -37,6 +37,16 @@ export function ExportButton() {
     }
   };
 
+  const handleExportChildren = async () => {
+    if (!parsedFile || !validationResult) return;
+    setExporting(true);
+    try {
+      await exportChildrenFile(parsedFile, validationResult, scope);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const buttonClass =
     'px-6 py-2.5 bg-valid-600 text-white rounded-lg font-medium hover:bg-valid-700 transition-colors disabled:opacity-50';
 
@@ -54,6 +64,9 @@ export function ExportButton() {
         </select>
         <button onClick={handleExport} disabled={exporting} className={buttonClass}>
           {exporting ? t('results.exporting') : t('results.exportMekome')}
+        </button>
+        <button onClick={handleExportChildren} disabled={exporting} className={buttonClass}>
+          {exporting ? t('results.exporting') : t('results.exportChildren')}
         </button>
       </div>
     );

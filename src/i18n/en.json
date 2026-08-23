@@ -101,6 +101,7 @@
     },
     "export": "Export to Excel",
     "exportMekome": "Export Mekome File",
+    "exportChildren": "Export Children File",
     "mekomeScope": {
       "all": "All rows ({{count}})",
       "valid": "Valid rows only ({{count}})",

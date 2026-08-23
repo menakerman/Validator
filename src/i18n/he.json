@@ -101,6 +101,7 @@
     },
     "export": "ייצוא לאקסל",
     "exportMekome": "ייצוא לקובץ מקומי",
+    "exportChildren": "ייצוא לקובץ ילדים",
     "mekomeScope": {
       "all": "כל השורות ({{count}})",
       "valid": "שורות תקינות בלבד ({{count}})",
