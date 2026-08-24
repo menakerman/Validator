@@ -19,6 +19,13 @@ const CHILDREN_ICON = (
   </svg>
 );
 
+// Warning triangle — used for the error-report export.
+const ERROR_ICON = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+  </svg>
+);
+
 // Spinner shown while an export is running.
 const SPINNER_ICON = (
   <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
@@ -27,10 +34,20 @@ const SPINNER_ICON = (
   </svg>
 );
 
+const baseButton =
+  'inline-flex items-center justify-center gap-2 px-6 py-2.5 text-white rounded-lg font-medium transition-colors disabled:opacity-50';
+const greenButton = `${baseButton} bg-valid-600 hover:bg-valid-700`;
+const blueButton = `${baseButton} bg-primary-600 hover:bg-primary-700`;
+const redButton = `${baseButton} bg-error-600 hover:bg-error-700`;
+
+// Which Kehilanet file the pending row-scope choice will produce.
+type KehilanetTarget = 'mekome' | 'children';
+
 export function ExportButton() {
   const { t } = useTranslation();
   const [exporting, setExporting] = useState(false);
-  const [scope, setScope] = useState<MekomeExportScope>('all');
+  // When set, the "which rows?" dialog is open for the chosen output file.
+  const [pending, setPending] = useState<KehilanetTarget | null>(null);
   const mode = useValidatorStore((s) => s.mode);
   const parsedFile = useValidatorStore((s) => s.parsedFile);
   const columnMappings = useValidatorStore((s) => s.columnMappings);
@@ -46,63 +63,112 @@ export function ExportButton() {
     return { total, errors: errorRows.size, valid: total - errorRows.size };
   }, [parsedFile, validationResult]);
 
-  const handleExport = async () => {
+  // Plain (non-Kehilanet) validator export.
+  const handleExportExcel = async () => {
     if (!parsedFile || !validationResult) return;
     setExporting(true);
     try {
-      if (mode === 'kehilanet') {
-        await exportMekomeFile(parsedFile, validationResult, scope);
+      await exportValidatedExcel(parsedFile, columnMappings, validationResult, t);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Run a Kehilanet export for the given target file and row scope.
+  const runKehilanetExport = async (target: KehilanetTarget, scope: MekomeExportScope) => {
+    if (!parsedFile || !validationResult) return;
+    setPending(null);
+    setExporting(true);
+    try {
+      if (target === 'children') {
+        await exportChildrenFile(parsedFile, validationResult, scope);
       } else {
-        await exportValidatedExcel(parsedFile, columnMappings, validationResult, t);
+        await exportMekomeFile(parsedFile, validationResult, scope);
       }
     } finally {
       setExporting(false);
     }
   };
 
-  const handleExportChildren = async () => {
+  // Error report: the error rows only, with the offending cells highlighted.
+  const handleErrorReport = async () => {
     if (!parsedFile || !validationResult) return;
     setExporting(true);
     try {
-      await exportChildrenFile(parsedFile, validationResult, scope);
+      await exportMekomeFile(parsedFile, validationResult, 'errors');
     } finally {
       setExporting(false);
     }
   };
 
-  const baseButton =
-    'inline-flex items-center justify-center gap-2 px-6 py-2.5 text-white rounded-lg font-medium transition-colors disabled:opacity-50';
-  const greenButton = `${baseButton} bg-valid-600 hover:bg-valid-700`;
-  const blueButton = `${baseButton} bg-primary-600 hover:bg-primary-700`;
-
-  if (mode === 'kehilanet') {
+  if (mode !== 'kehilanet') {
     return (
-      <div className="flex items-center gap-2">
-        <select
-          value={scope}
-          onChange={(e) => setScope(e.target.value as MekomeExportScope)}
-          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-        >
-          <option value="all">{t('results.mekomeScope.all', { count: counts.total })}</option>
-          <option value="valid">{t('results.mekomeScope.valid', { count: counts.valid })}</option>
-          <option value="errors">{t('results.mekomeScope.errors', { count: counts.errors })}</option>
-        </select>
-        <button onClick={handleExport} disabled={exporting} className={greenButton}>
-          {exporting ? SPINNER_ICON : DOWNLOAD_ICON}
-          {exporting ? t('results.exporting') : t('results.exportMekome')}
-        </button>
-        <button onClick={handleExportChildren} disabled={exporting} className={blueButton}>
-          {exporting ? SPINNER_ICON : CHILDREN_ICON}
-          {exporting ? t('results.exporting') : t('results.exportChildren')}
-        </button>
-      </div>
+      <button onClick={handleExportExcel} disabled={exporting} className={greenButton}>
+        {exporting ? SPINNER_ICON : DOWNLOAD_ICON}
+        {exporting ? t('results.exporting') : t('results.export')}
+      </button>
     );
   }
 
   return (
-    <button onClick={handleExport} disabled={exporting} className={greenButton}>
-      {exporting ? SPINNER_ICON : DOWNLOAD_ICON}
-      {exporting ? t('results.exporting') : t('results.export')}
-    </button>
+    <div className="flex items-center gap-2">
+      <button onClick={() => setPending('mekome')} disabled={exporting} className={greenButton}>
+        {exporting ? SPINNER_ICON : DOWNLOAD_ICON}
+        {exporting ? t('results.exporting') : t('results.exportMekome')}
+      </button>
+      <button onClick={() => setPending('children')} disabled={exporting} className={blueButton}>
+        {exporting ? SPINNER_ICON : CHILDREN_ICON}
+        {exporting ? t('results.exporting') : t('results.exportChildren')}
+      </button>
+      <button
+        onClick={handleErrorReport}
+        disabled={exporting || counts.errors === 0}
+        className={redButton}
+        title={counts.errors === 0 ? t('results.exportErrors.none') : undefined}
+      >
+        {exporting ? SPINNER_ICON : ERROR_ICON}
+        {t('results.exportErrors.button', { count: counts.errors })}
+      </button>
+
+      {pending && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setPending(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-1 text-lg font-semibold text-gray-900">
+              {t('results.exportChoice.title')}
+            </h3>
+            <p className="mb-5 text-sm text-gray-500">
+              {t(
+                pending === 'children'
+                  ? 'results.exportChoice.descriptionChildren'
+                  : 'results.exportChoice.descriptionMekome',
+              )}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button className={greenButton} onClick={() => runKehilanetExport(pending, 'all')}>
+                {t('results.exportChoice.all', { count: counts.total })}
+              </button>
+              <button
+                className={`${baseButton} bg-primary-600 hover:bg-primary-700`}
+                onClick={() => runKehilanetExport(pending, 'valid')}
+              >
+                {t('results.exportChoice.valid', { count: counts.valid })}
+              </button>
+              <button
+                className="mt-1 py-1 text-sm text-gray-500 hover:text-gray-700"
+                onClick={() => setPending(null)}
+              >
+                {t('results.exportChoice.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
