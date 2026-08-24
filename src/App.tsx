@@ -6,6 +6,7 @@ import { ValidationProgress } from './components/ValidationProgress';
 import { SummaryDashboard } from './components/SummaryDashboard';
 import { ResultsTable } from './components/ResultsTable';
 import { ExportButton } from './components/ExportButton';
+import { ImportLogAnalyzer } from './components/ImportLogAnalyzer';
 import { useValidatorStore } from './stores/validatorStore';
 
 function App() {
@@ -24,6 +25,8 @@ function App() {
       {step === 'mapping' && <ColumnMapping />}
 
       {step === 'validating' && <ValidationProgress />}
+
+      {step === 'importLog' && <ImportLogAnalyzer />}
 
       {step === 'results' && (
         <div>

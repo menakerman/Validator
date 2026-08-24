@@ -58,9 +58,11 @@ interface ValidatorStore {
   currentPage: number;
   error: string | null;
   history: HistoryEntry[];
+  importLogFile: File | null;
 
   parseFile: (file: File) => Promise<void>;
   parseKehilanet: (file: File) => Promise<void>;
+  openImportLog: (file?: File) => void;
   setColumnType: (columnIndex: number, type: ColumnType) => void;
   setColumnMandatory: (columnIndex: number, mandatory: boolean) => void;
   setColumnEmptyValues: (columnIndex: number, emptyValues: string[]) => void;
@@ -103,6 +105,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => {
   currentPage: 1,
   error: null,
   history: loadHistory(),
+  importLogFile: null,
 
   parseFile: async (file: File) => {
     try {
@@ -135,6 +138,12 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => {
     } catch (err) {
       set({ error: (err as Error).message });
     }
+  },
+
+  // Enter the import-log analysis tool, optionally with a log file already
+  // dropped on the entry card (the analyzer parses it on mount).
+  openImportLog: (file?: File) => {
+    set({ step: 'importLog', importLogFile: file ?? null, error: null });
   },
 
   setColumnType: (columnIndex: number, type: ColumnType) => {
@@ -384,6 +393,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => {
       resultFilter: 'all',
       currentPage: 1,
       error: null,
+      importLogFile: null,
     });
   },
 

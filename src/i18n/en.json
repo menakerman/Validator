@@ -32,6 +32,10 @@
       "parseError": "Error reading file. Make sure the file is valid",
       "empty": "File is empty or contains no data",
       "notKehilanet": "This is not a valid Kehilanet file (Kehilanet header row not found)"
+    },
+    "importLog": {
+      "title": "Analyze import log",
+      "description": "Upload the import log returned after importing the children file to analyze and fix the errors."
     }
   },
   "recent": {
@@ -119,6 +123,49 @@
     "fixAll": "Fix All ({{count}})",
     "newFile": "New File",
     "perColumn": "Per Column"
+  },
+  "importLog": {
+    "title": "Import Log Analysis",
+    "subtitle": "Analyze import errors and build a corrected file for re-import",
+    "totalErrors": "Total errors",
+    "dropLog": {
+      "title": "Import log",
+      "hint": "Drop the import-log file here (.xlsx / .csv)"
+    },
+    "dropChildren": {
+      "title": "Imported children file",
+      "hint": "Drop the original children file to build a corrected version"
+    },
+    "action": {
+      "exclude": "Removed",
+      "repairPhone": "Repaired"
+    },
+    "searchPlaceholder": "Search by name, ID or row number",
+    "allCodes": "All codes ({{count}})",
+    "showing": "Showing {{shown}} of {{total}}",
+    "col": {
+      "row": "Row",
+      "id": "ID",
+      "name": "Name",
+      "error": "Error"
+    },
+    "fix": {
+      "title": "Build corrected re-import file",
+      "description": "Rows that cannot be created (parent not found, user exists, missing ID) are removed, and invalid mobile numbers are cleared — so the next import succeeds.",
+      "button": "Build corrected file",
+      "needChildren": "Upload the children file first",
+      "done": "Corrected file created and downloaded.",
+      "statRemaining": "Rows in corrected file: {{count}}",
+      "statRemoved": "Rows removed: {{count}}",
+      "statRepaired": "Mobile numbers cleared: {{count}}",
+      "statMatched": "Rows matched: {{matched}} of {{total}}",
+      "unmatched": "{{count}} rows could not be matched to the children file — check you uploaded the right file."
+    },
+    "error": {
+      "empty": "The file is empty",
+      "notLog": "Not a valid import log (missing 'קוד שגיאה' header)",
+      "notChildren": "Not a valid children file (missing 'תעודת זהות ילד' header)"
+    }
   },
   "validators": {
     "id": {
