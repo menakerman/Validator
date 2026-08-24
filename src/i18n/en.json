@@ -102,10 +102,17 @@
     "export": "Export to Excel",
     "exportMekome": "Export Mekome File",
     "exportChildren": "Export Children File",
-    "mekomeScope": {
+    "exportErrors": {
+      "button": "Error Report ({{count}})",
+      "none": "No rows with errors"
+    },
+    "exportChoice": {
+      "title": "Which rows to export?",
+      "descriptionMekome": "Export all rows (including rows with errors) or only the valid rows to the Mekome file.",
+      "descriptionChildren": "Export all rows (including rows with errors) or only the valid rows to the children file.",
       "all": "All rows ({{count}})",
       "valid": "Valid rows only ({{count}})",
-      "errors": "Error rows only ({{count}})"
+      "cancel": "Cancel"
     },
     "exporting": "Exporting...",
     "fix": "Fix",
