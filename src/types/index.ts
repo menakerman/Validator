@@ -53,7 +53,7 @@ export interface ParsedFile {
   totalRows: number;
 }
 
-export type AppStep = 'upload' | 'mapping' | 'validating' | 'results' | 'importLog';
+export type AppStep = 'upload' | 'mapping' | 'validating' | 'results' | 'importLog' | 'regex';
 
 export interface HistoryEntry {
   id: string;

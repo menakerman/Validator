@@ -36,6 +36,12 @@
     "importLog": {
       "title": "Analyze import log",
       "description": "Upload the import log returned after importing the children file to analyze and fix the errors."
+    },
+    "regex": {
+      "title": "Regex creator",
+      "description": "Drop files with similar names and get a regular expression with named groups: id, month, year",
+      "hint": "Only the file names are used — contents are never read",
+      "open": "Open tool"
     }
   },
   "recent": {
@@ -165,6 +171,54 @@
       "empty": "The file is empty",
       "notLog": "Not a valid import log (missing 'קוד שגיאה' header)",
       "notChildren": "Not a valid children file (missing 'תעודת זהות ילד' header)"
+    }
+  },
+  "regex": {
+    "title": "Regex creator",
+    "subtitle": "Build a named-group regular expression from a list of file names",
+    "input": {
+      "title": "File names",
+      "hint": "One name per line. You can also drag files or a folder here — only the names are used.",
+      "count": "{{count}} names",
+      "chooseFiles": "Choose files",
+      "chooseFolder": "Choose folder",
+      "sample": "Example",
+      "clear": "Clear"
+    },
+    "output": {
+      "title": "Regular expression",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "empty": "Add file names to generate a pattern"
+    },
+    "options": {
+      "anchors": "Anchors (^ and $)",
+      "ignoreCase": "Ignore case",
+      "strictLengths": "Fixed lengths (\\d{9} instead of \\d+)"
+    },
+    "groups": {
+      "title": "Segments and groups",
+      "description": "Every segment that differs between the names became a capture group. Rename it, edit its pattern, or turn it back into literal text.",
+      "capture": "Capture",
+      "name": "Name",
+      "pattern": "Pattern",
+      "literal": "Literal text",
+      "resetEdits": "Reset manual edits"
+    },
+    "test": {
+      "title": "Match test",
+      "name": "File name",
+      "groups": "Captured values",
+      "unmatched": "No match",
+      "summary": "{{matched}} of {{total}} match"
+    },
+    "warn": {
+      "fallback": "The names do not share a structure, so a loose pattern was built from the common prefix and suffix. You can edit it by hand."
+    },
+    "errors": {
+      "invalidName": "Invalid group name: \"{{name}}\". Use letters, digits or underscore, not starting with a digit.",
+      "duplicateName": "The group name \"{{name}}\" is used more than once.",
+      "invalidPattern": "Invalid pattern: {{message}}"
     }
   },
   "validators": {
