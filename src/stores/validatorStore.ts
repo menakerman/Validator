@@ -59,10 +59,12 @@ interface ValidatorStore {
   error: string | null;
   history: HistoryEntry[];
   importLogFile: File | null;
+  regexNames: string[];
 
   parseFile: (file: File) => Promise<void>;
   parseKehilanet: (file: File) => Promise<void>;
   openImportLog: (file?: File) => void;
+  openRegexBuilder: (names?: string[]) => void;
   setColumnType: (columnIndex: number, type: ColumnType) => void;
   setColumnMandatory: (columnIndex: number, mandatory: boolean) => void;
   setColumnEmptyValues: (columnIndex: number, emptyValues: string[]) => void;
@@ -106,6 +108,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => {
   error: null,
   history: loadHistory(),
   importLogFile: null,
+  regexNames: [],
 
   parseFile: async (file: File) => {
     try {
@@ -144,6 +147,12 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => {
   // dropped on the entry card (the analyzer parses it on mount).
   openImportLog: (file?: File) => {
     set({ step: 'importLog', importLogFile: file ?? null, error: null });
+  },
+
+  // Enter the file-name regex builder, optionally seeded with names dropped
+  // on the entry card.
+  openRegexBuilder: (names?: string[]) => {
+    set({ step: 'regex', regexNames: names ?? [], error: null });
   },
 
   setColumnType: (columnIndex: number, type: ColumnType) => {
@@ -394,6 +403,7 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => {
       currentPage: 1,
       error: null,
       importLogFile: null,
+      regexNames: [],
     });
   },
 
