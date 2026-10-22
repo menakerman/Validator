@@ -42,6 +42,12 @@
       "description": "Drop files with similar names and get a regular expression with named groups: id, month, year",
       "hint": "Only the file names are used — contents are never read",
       "open": "Open tool"
+    },
+    "protocol": {
+      "title": "Kehilanet protocol validator",
+      "description": "Fetch a Kehilanet protocol by community id and protocol id, and inspect the response",
+      "hint": "The request is sent through the app's own server",
+      "open": "Open tool"
     }
   },
   "recent": {
@@ -171,6 +177,43 @@
       "empty": "The file is empty",
       "notLog": "Not a valid import log (missing 'קוד שגיאה' header)",
       "notChildren": "Not a valid children file (missing 'תעודת זהות ילד' header)"
+    }
+  },
+  "protocol": {
+    "title": "Kehilanet protocol validator",
+    "subtitle": "Run the getProtocolById request and inspect Kehilanet's response",
+    "form": {
+      "title": "Request",
+      "communityId": "Community id (communityId)",
+      "communityIdPlaceholder": "13318",
+      "protocolId": "Protocol id (protocolId)",
+      "protocolIdPlaceholder": "24423",
+      "digitsOnly": "Id must contain digits only",
+      "run": "Run request",
+      "running": "Sending...",
+      "hint": "Sent through the app's server, using the token and cookie configured there"
+    },
+    "result": {
+      "title": "Response",
+      "status": "Status {{status}}",
+      "duration": "{{ms}} ms",
+      "copy": "Copy",
+      "copied": "Copied",
+      "showRaw": "Show raw",
+      "showPretty": "Show JSON",
+      "notJson": "The response is not valid JSON — showing the raw text",
+      "empty": "The response is empty"
+    },
+    "curl": {
+      "title": "Equivalent curl",
+      "description": "The same request to run from a terminal (token and cookie omitted)"
+    },
+    "errors": {
+      "network": "Cannot reach the app server. Make sure it is running via npm run dev or npm start",
+      "badRequest": "Malformed request",
+      "missingIds": "Both ids are required",
+      "upstream": "Kehilanet did not respond",
+      "unexpected": "Unexpected error while running the request"
     }
   },
   "regex": {
