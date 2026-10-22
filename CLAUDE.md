@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — Bump patch version, type-check, and build to `dist/`
 - `npm run lint` — Run ESLint (flat config, TS/TSX only)
 - `npm run preview` — Preview the production build locally
-- `npm run start` — Serve the `dist/` folder (used for Railway deployment)
+- `npm run start` — Run `server/index.js`: serves the `dist/` folder plus the Kehilanet proxy (used for Railway deployment)
 
 ## Architecture
 
-This is a client-side-only React + TypeScript app for validating Israeli Excel data (ID numbers, phone numbers, landlines, emails). It uses Vite, Tailwind CSS v4 (via `@tailwindcss/vite` plugin), and Zustand for state management. No backend — all processing happens in the browser.
+This is a browser-based React + TypeScript app for validating Israeli Excel data (ID numbers, phone numbers, landlines, emails). It uses Vite, Tailwind CSS v4 (via `@tailwindcss/vite` plugin), and Zustand for state management. All file processing happens in the browser; the only server-side code is `server/` — a static file server with one proxy route for the Kehilanet protocol API (see below).
 
 ### App Flow (4 steps)
 
@@ -29,6 +29,8 @@ The app follows a linear step machine defined by `AppStep`: `upload` → `mappin
 **Web Worker** (`src/workers/validation.worker.ts`): For files with >10,000 rows, validation runs in a Web Worker with progress reporting. Below that threshold, validation runs inline with `requestAnimationFrame` batching.
 
 **Excel Export** (`src/utils/excelExporter.ts`): Uses ExcelJS to generate a styled .xlsx with color-coded cells and a summary sheet.
+
+**Kehilanet Protocol Proxy** (`server/kehilanetProxy.js`): The `protocol` step (`src/components/ProtocolValidator.tsx`) POSTs `{ communityId, protocolId }` to `/api/kehilanet/protocol`; the proxy replays it upstream as a GET-with-JSON-body, which the browser cannot do itself (no body on GET, forbidden `Cookie` header, no CORS headers from Kehilanet). The same handler is mounted on the Vite dev server (`vite.config.ts`) and on the production server (`server/index.js`). Credentials default to the known values and are overridable via `MEKOME_AUTH`, `KEHILANET_COOKIE`, and `KEHILANET_PROTOCOL_URL` env vars.
 
 ### Internationalization
 

@@ -65,6 +65,7 @@ interface ValidatorStore {
   parseKehilanet: (file: File) => Promise<void>;
   openImportLog: (file?: File) => void;
   openRegexBuilder: (names?: string[]) => void;
+  openProtocol: () => void;
   setColumnType: (columnIndex: number, type: ColumnType) => void;
   setColumnMandatory: (columnIndex: number, mandatory: boolean) => void;
   setColumnEmptyValues: (columnIndex: number, emptyValues: string[]) => void;
@@ -153,6 +154,12 @@ export const useValidatorStore = create<ValidatorStore>((set, get) => {
   // on the entry card.
   openRegexBuilder: (names?: string[]) => {
     set({ step: 'regex', regexNames: names ?? [], error: null });
+  },
+
+  // Enter the Kehilanet protocol tool, which runs its request through the
+  // app's own proxy rather than touching any uploaded file.
+  openProtocol: () => {
+    set({ step: 'protocol', error: null });
   },
 
   setColumnType: (columnIndex: number, type: ColumnType) => {

@@ -97,10 +97,21 @@ function DropCard({ variant, title, description, icon, badge, onFile }: DropCard
   );
 }
 
-// The regex builder takes any file names, so it skips the Excel-only validation
-// in useFileUpload and simply collects the names of whatever is dropped.
-function NameToolCard({ onNames }: { onNames: (names: string[]) => void }) {
-  const { t } = useTranslation();
+interface ToolCardProps {
+  title: string;
+  description: string;
+  action: string;
+  hint?: string;
+  icon: ReactNode;
+  onOpen: () => void;
+  /** Set for tools that accept dropped files; receives the dropped file names. */
+  onDropNames?: (names: string[]) => void;
+}
+
+// Entry card for tools that don't parse an uploaded Excel file, so they skip
+// the validation in useFileUpload. Some of them (the regex builder) still use
+// the names of whatever is dropped on the card.
+function ToolCard({ title, description, action, hint, icon, onOpen, onDropNames }: ToolCardProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   return (
@@ -108,19 +119,21 @@ function NameToolCard({ onNames }: { onNames: (names: string[]) => void }) {
       role="button"
       tabIndex={0}
       onDragEnter={(e) => {
+        if (!onDropNames) return;
         e.preventDefault();
         setIsDragging(true);
       }}
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => onDropNames && e.preventDefault()}
       onDragLeave={() => setIsDragging(false)}
       onDrop={(e) => {
+        if (!onDropNames) return;
         e.preventDefault();
         setIsDragging(false);
-        onNames([...e.dataTransfer.files].map((f) => f.name));
+        onDropNames([...e.dataTransfer.files].map((f) => f.name));
       }}
-      onClick={() => onNames([])}
+      onClick={onOpen}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onNames([]);
+        if (e.key === 'Enter' || e.key === ' ') onOpen();
       }}
       className={`
         group relative flex flex-col items-center text-center rounded-2xl border-2 border-dashed
@@ -132,18 +145,16 @@ function NameToolCard({ onNames }: { onNames: (names: string[]) => void }) {
       `}
     >
       <div className="mb-4 w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-100 text-slate-500 transition-colors group-hover:bg-primary-100 group-hover:text-primary-600">
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M14.25 9.75 16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
-        </svg>
+        {icon}
       </div>
 
-      <h3 className="text-lg font-semibold text-gray-800 mb-1.5">{t('upload.regex.title')}</h3>
-      <p className="text-sm text-gray-500 mb-5 max-w-xs leading-relaxed">{t('upload.regex.description')}</p>
+      <h3 className="text-lg font-semibold text-gray-800 mb-1.5">{title}</h3>
+      <p className="text-sm text-gray-500 mb-5 max-w-xs leading-relaxed">{description}</p>
 
       <span className="inline-block px-5 py-2.5 rounded-lg font-medium text-sm bg-slate-100 text-slate-700 transition-colors group-hover:bg-slate-200">
-        {t('upload.regex.open')}
+        {action}
       </span>
-      <p className="mt-3 text-xs text-gray-400">{t('upload.regex.hint')}</p>
+      {hint && <p className="mt-3 text-xs text-gray-400">{hint}</p>}
     </div>
   );
 }
@@ -154,6 +165,7 @@ export function FileUpload() {
   const parseKehilanet = useValidatorStore((s) => s.parseKehilanet);
   const openImportLog = useValidatorStore((s) => s.openImportLog);
   const openRegexBuilder = useValidatorStore((s) => s.openRegexBuilder);
+  const openProtocol = useValidatorStore((s) => s.openProtocol);
   const storeError = useValidatorStore((s) => s.error);
 
   return (
@@ -189,7 +201,7 @@ export function FileUpload() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid gap-6 md:grid-cols-3">
         <DropCard
           variant="importLog"
           title={t('upload.importLog.title')}
@@ -201,7 +213,31 @@ export function FileUpload() {
             </svg>
           }
         />
-        <NameToolCard onNames={openRegexBuilder} />
+        <ToolCard
+          title={t('upload.regex.title')}
+          description={t('upload.regex.description')}
+          action={t('upload.regex.open')}
+          hint={t('upload.regex.hint')}
+          onOpen={() => openRegexBuilder([])}
+          onDropNames={openRegexBuilder}
+          icon={
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M14.25 9.75 16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
+            </svg>
+          }
+        />
+        <ToolCard
+          title={t('upload.protocol.title')}
+          description={t('upload.protocol.description')}
+          action={t('upload.protocol.open')}
+          hint={t('upload.protocol.hint')}
+          onOpen={openProtocol}
+          icon={
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.95 8.95 0 0 0 4.5-1.207M12 21a8.95 8.95 0 0 1-4.5-1.207M3.6 9h16.8M3.6 15h16.8M12 3c2.1 2.4 3.15 5.4 3.15 9S14.1 18.6 12 21c-2.1-2.4-3.15-5.4-3.15-9S9.9 5.4 12 3Z" />
+            </svg>
+          }
+        />
       </div>
 
       <p className="text-center text-xs text-gray-400 mt-5">{t('upload.formats')}</p>
